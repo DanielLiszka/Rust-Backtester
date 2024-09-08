@@ -1,0 +1,28 @@
+[package]
+name = "my_project"  
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+lazy_static = "1.4"
+
+[[bench]]
+name = "indicator_benchmark"
+harness = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+csv = "1.1"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[[bin]]
+name = "my_project"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3      # Maximum optimization level
+lto = false         # Enable link-time optimization
