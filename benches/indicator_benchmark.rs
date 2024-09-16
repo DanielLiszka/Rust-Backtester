@@ -1,18 +1,17 @@
 extern crate criterion;
-extern crate my_project;
 extern crate csv;
+extern crate my_project;
 extern crate serde;
 
-use criterion::{Criterion, criterion_group, criterion_main};
-use my_project::indicators::{sma::calculate_sma, ema::calculate_ema};  // Assuming you have both in their respective modules
+use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
+use my_project::indicators::{ema::calculate_ema, sma::calculate_sma};
 use serde::Deserialize;
-use std::fs::File;
 use std::error::Error;
+use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
-// Global counter to track how many times data is loaded
 static LOAD_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
 
 #[derive(Debug, Deserialize)]
 pub struct Candle {
@@ -34,41 +33,38 @@ fn read_candles_from_csv(file_path: &str) -> Result<Vec<Candle>, Box<dyn Error>>
         candles.push(record);
     }
 
-    // Increment the counter each time the function is called
     LOAD_COUNTER.fetch_add(1, Ordering::SeqCst);
 
     Ok(candles)
 }
 
-// Preload the candles globally before any benchmarks are run
 lazy_static::lazy_static! {
     static ref CANDLES: Vec<f64> = {
         let candles = read_candles_from_csv("C:/Users/dlisz/Desktop/Rust Projects/First Rust Project/my_project/src/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
             .expect("Failed to load candles");
-        println!("Candles loaded: {}", candles.len()); // Print to confirm candles loaded
-        println!("Candles loaded {} times.", LOAD_COUNTER.load(Ordering::SeqCst)); // Confirm loading count
+        println!("Candles loaded: {}", candles.len());
+        println!("Candles loaded {} times.", LOAD_COUNTER.load(Ordering::SeqCst));
         candles.iter().map(|c| c.close).collect()
     };
 }
-// Benchmark function for SMA
-fn benchmark_sma(c: &mut Criterion) {
+
+fn benchmark_indicators(c: &mut Criterion) {
     let period = 200;
 
-    // Use the preloaded global CANDLES data
-    c.bench_function("SMA", |b| {
+    let mut group = c.benchmark_group("Indicator Benchmarks");
+    group.measurement_time(Duration::new(2, 0));
+    group.warm_up_time(Duration::new(1, 0));
+
+    group.bench_function(BenchmarkId::new("SMA", period), |b| {
         b.iter(|| calculate_sma(&CANDLES, period))
     });
-}
-// Benchmark function for EMA
-fn benchmark_ema(c: &mut Criterion) {
-    let period = 200;
 
-    // Use the preloaded global CANDLES data
-    c.bench_function("EMA", |b| {
+    group.bench_function(BenchmarkId::new("EMA", period), |b| {
         b.iter(|| calculate_ema(&CANDLES, period))
     });
+
+    group.finish();
 }
-// Create the benchmark group
-criterion_group!(benches, benchmark_sma, benchmark_ema);
-// Register the benchmark group for execution
+
+criterion_group!(benches, benchmark_indicators);
 criterion_main!(benches);
