@@ -1,66 +1,70 @@
 extern crate criterion;
-extern crate csv;
 extern crate my_project;
-extern crate serde;
+extern crate lazy_static;
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use my_project::indicators::{ema::calculate_ema, sma::calculate_sma};
-use serde::Deserialize;
-use std::error::Error;
-use std::fs::File;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use my_project::indicators::{ema::calculate_ema, sma::calculate_sma, rsi::calculate_rsi, acosc::calculate_acosc};
+use my_project::indicators::data_loader::{BENCH_CANDLES, select_candle_field};
 use std::time::Duration;
 
-static LOAD_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-#[derive(Debug, Deserialize)]
-pub struct Candle {
-    pub time: f64,
-    pub open: f64,
-    pub high: f64,
-    pub low: f64,
-    pub close: f64,
-    pub volume: f64,
-}
-
-fn read_candles_from_csv(file_path: &str) -> Result<Vec<Candle>, Box<dyn Error>> {
-    let file = File::open(file_path)?;
-    let mut rdr = csv::Reader::from_reader(file);
-
-    let mut candles = Vec::new();
-    for result in rdr.deserialize() {
-        let record: Candle = result?;
-        candles.push(record);
-    }
-
-    LOAD_COUNTER.fetch_add(1, Ordering::SeqCst);
-
-    Ok(candles)
-}
-
-lazy_static::lazy_static! {
-    static ref CANDLES: Vec<f64> = {
-        let candles = read_candles_from_csv("C:/Users/dlisz/Desktop/Rust Projects/First Rust Project/my_project/src/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
-            .expect("Failed to load candles");
-        println!("Candles loaded: {}", candles.len());
-        println!("Candles loaded {} times.", LOAD_COUNTER.load(Ordering::SeqCst));
-        candles.iter().map(|c| c.close).collect()
-    };
-}
-
 fn benchmark_indicators(c: &mut Criterion) {
-    let period = 200;
+    // Define periods for each indicator
+    let period_sma = 9;
+    let period_ema = 9;
+    let period_rsi = 14;
+
+    // Access the loaded candles directly
+    let candles = &*BENCH_CANDLES;
+
+    // Pre-extract the "close" field once before benchmarking
+    let close_prices = select_candle_field(candles, "close")
+        .expect("Failed to extract close prices");
 
     let mut group = c.benchmark_group("Indicator Benchmarks");
-    group.measurement_time(Duration::new(2, 0));
-    group.warm_up_time(Duration::new(1, 0));
+    group.measurement_time(Duration::new(4, 0));
+    group.warm_up_time(Duration::new(2, 0));
 
-    group.bench_function(BenchmarkId::new("SMA", period), |b| {
-        b.iter(|| calculate_sma(&CANDLES, period))
+    // Benchmark SMA
+    group.bench_function(BenchmarkId::new("SMA_close_9", period_sma), |b| {
+        b.iter(|| {
+            calculate_sma(
+                black_box(&close_prices),
+                black_box(period_sma),
+            )
+            .expect("Failed to calculate SMA")
+        })
     });
 
-    group.bench_function(BenchmarkId::new("EMA", period), |b| {
-        b.iter(|| calculate_ema(&CANDLES, period))
+    // Benchmark EMA
+    group.bench_function(BenchmarkId::new("EMA_close_9", period_ema), |b| {
+        b.iter(|| {
+            calculate_ema(
+                black_box(&close_prices),
+                black_box(period_ema),
+            )
+            .expect("Failed to calculate EMA")
+        })
+    });
+
+    // Benchmark RSI
+    group.bench_function(BenchmarkId::new("RSI_close_14", period_rsi), |b| {
+        b.iter(|| {
+            calculate_rsi(
+                black_box(&close_prices),
+                black_box(period_rsi),
+            )
+            .expect("Failed to calculate RSI")
+        })
+    });
+
+    // Benchmark ACOSC
+    group.bench_function(BenchmarkId::new("ACOSC", 0), |b| {
+        b.iter(|| {
+            calculate_acosc(
+                black_box(&candles),
+            )
+            .expect("Failed to calculate ACOSC")
+        })
     });
 
     group.finish();

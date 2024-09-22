@@ -4,7 +4,6 @@
 
 mod indicators; 
 
-//use indicators::sma::simple_moving_average;
 
 use std::error::Error;
 use std::fs::File;

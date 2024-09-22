@@ -1,41 +1,65 @@
-#[inline]
-pub fn calculate_ema(data: &[f64], period: usize) -> Vec<f64> {
+use std::error::Error;
+
+pub fn calculate_ema(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+    
+    if period == 0 || period > data.len() {
+        return Err("Invalid period specified for EMA calculation.".into());
+    }
+    
     let len = data.len();
     let alpha = 2.0 / (period as f64 + 1.0);
     let mut ema_values = Vec::with_capacity(len);
-
+    
     let mut last_ema = data[0];
     ema_values.push(last_ema);
-
-    for i in 1..data.len() {
+    
+    for i in 1..len {
         last_ema = alpha * data[i] + (1.0 - alpha) * last_ema;
         ema_values.push(last_ema);
     }
-
-    ema_values
+    
+    Ok(ema_values)
 }
 
-#[test]
-fn test_ema_accuracy() {
-    use super::data_loader::TEST_CLOSE_PRICES;  // Access CLOSE_PRICES from the local data_loader module
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::select_candle_field;
 
-    let close_prices = TEST_CLOSE_PRICES.lock().unwrap();  // Access the global data
+    #[test]
+    fn test_ema_accuracy() {
+        let candles = TEST_CANDLES.lock().unwrap();
+        let close_prices = select_candle_field(&candles, "close").expect("Failed to extract close prices");
+        let period = 9;
 
-    let period = 9;
-    let result_ema = calculate_ema(&close_prices, period);
+        let ema_result = calculate_ema(&close_prices, period).expect("Failed to calculate EMA");
 
-    let expected_last_four_ema = vec![
-        59302.2,
-        59277.9,
-        59230.2,
-        59215.1
-    ];
+        let expected_last_five_ema = vec![
+            59302.2,
+            59277.9,
+            59230.2,
+            59215.1,
+            59103.1,
+        ];
 
-    let start_index = result_ema.len() - 5;
-    let result_last_five_ema = &result_ema[start_index..result_ema.len() - 1];
+        assert!(
+            ema_result.len() >= 5,
+            "Not enough EMA values for the test"
+        );
 
-    for (i, &value) in result_last_five_ema.iter().enumerate() {
-        assert!((value - expected_last_four_ema[i]).abs() < 1e-1,
-            "ema value miematch at index {}: expected {}, got {}", i, expected_last_four_ema[i], value);
+        let start_index = ema_result.len().saturating_sub(5);
+        let result_last_five_ema = &ema_result[start_index..];
+
+        for (i, &value) in result_last_five_ema.iter().enumerate() {
+            assert!(
+                (value - expected_last_five_ema[i]).abs() < 1e-1,
+                "EMA value mismatch at index {}: expected {}, got {}",
+                i,
+                expected_last_five_ema[i],
+                value
+            );
+        }
+
     }
 }
