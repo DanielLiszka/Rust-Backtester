@@ -3,3 +3,6 @@ pub mod sma;
 pub mod ema;
 pub mod rsi;
 pub mod acosc;
+pub mod ad;
+pub mod adx;
+pub mod adxr;

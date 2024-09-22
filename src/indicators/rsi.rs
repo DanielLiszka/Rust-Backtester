@@ -8,7 +8,7 @@ pub fn calculate_rsi(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn st
 
     let len = data.len();
     let mut rsi = Vec::with_capacity(len);
-    
+
     rsi.extend(std::iter::repeat(f64::NAN).take(period));
 
     let inv_period = 1.0 / period as f64;
@@ -59,13 +59,13 @@ pub fn calculate_rsi(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn st
 mod tests {
     use super::*;
     use crate::indicators::data_loader::TEST_CANDLES;
-    use crate::indicators::data_loader::select_candle_field;
 
     #[test]
     fn test_rsi_accuracy() {
         let candles = TEST_CANDLES.lock().unwrap();
-        let close_prices =
-        select_candle_field(&candles, "close").expect("Failed to extract close prices");
+        let close_prices = candles
+            .select_candle_field("close")
+            .expect("Failed to extract close prices");
         let period = 14;
 
         let rsi_result = calculate_rsi(&close_prices, period).expect("Failed to calculate RSI");
