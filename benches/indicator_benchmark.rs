@@ -6,7 +6,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use my_project::indicators::data_loader::{Candles, BENCH_CANDLES};
 use my_project::indicators::{
     acosc::calculate_acosc, ad::calculate_ad, ema::calculate_ema, rsi::calculate_rsi,
-    sma::calculate_sma, adx::calculate_adx
+    sma::calculate_sma, adx::calculate_adx, adxr::calculate_adxr,
 };
 use std::time::Duration;
 
@@ -16,6 +16,7 @@ fn benchmark_indicators(c: &mut Criterion) {
     let period_ema: usize = 9;
     let period_rsi: usize = 14;
     let period_adx: usize = 14;
+    let period_adxr: usize = 14;
 
     // Access the loaded candles directly
     let candles: &Candles = &*BENCH_CANDLES;
@@ -29,11 +30,16 @@ fn benchmark_indicators(c: &mut Criterion) {
     group.measurement_time(Duration::new(4, 0));
     group.warm_up_time(Duration::new(2, 0));
 
+    // Benchmark ADXR
+    group.bench_function(BenchmarkId::new("ADXR", 0), |b| {
+        b.iter(|| calculate_adxr(black_box(&candles), black_box(period_adxr)).expect("Failed to calculate ADXR"))
+    });
+
     // Benchmark ADX
     group.bench_function(BenchmarkId::new("ADX", 0), |b| {
-        b.iter(|| calculate_adx(black_box(&candles), black_box(period_adx)).expect("Failed to calculate AD"))
+        b.iter(|| calculate_adx(black_box(&candles), black_box(period_adx)).expect("Failed to calculate ADX"))
     });
-    
+
     // Benchmark SMA
     group.bench_function(BenchmarkId::new("SMA_close_9", period_sma), |b| {
         b.iter(|| {
