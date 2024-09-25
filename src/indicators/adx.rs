@@ -121,7 +121,7 @@ mod tests {
         let period: usize = 14;
         let ad_result: Vec<f64> = calculate_adx(&candles,period).expect("Failed to calculate adx");
 
-        let expected_last_five_ad = vec![
+        let expected_last_five_adx = vec![
             36.14,
             36.52,
             37.01,
@@ -138,7 +138,7 @@ mod tests {
         let result_last_five_ad = &ad_result[start_index..];
 
         for (i, &value) in result_last_five_ad.iter().enumerate() {
-            let expected_value = expected_last_five_ad[i];
+            let expected_value = expected_last_five_adx[i];
             assert!(
                 (value - expected_value).abs() < 1e-1,
                 "adx value mismatch at index {}: expected {}, got {}",

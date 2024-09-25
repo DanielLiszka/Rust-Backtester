@@ -6,3 +6,4 @@ pub mod acosc;
 pub mod ad;
 pub mod adx;
 pub mod adxr;
+pub mod alligator;

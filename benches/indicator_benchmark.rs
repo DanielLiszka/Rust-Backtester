@@ -6,7 +6,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use my_project::indicators::data_loader::{Candles, BENCH_CANDLES};
 use my_project::indicators::{
     acosc::calculate_acosc, ad::calculate_ad, ema::calculate_ema, rsi::calculate_rsi,
-    sma::calculate_sma, adx::calculate_adx, adxr::calculate_adxr,
+    sma::calculate_sma, adx::calculate_adx, adxr::calculate_adxr, alligator::calculate_alligator,
 };
 use std::time::Duration;
 
@@ -25,10 +25,18 @@ fn benchmark_indicators(c: &mut Criterion) {
     let close_prices = candles
         .select_candle_field("close")
         .expect("Failed to extract close prices");
+    let hl2_prices = candles
+        .get_calculated_field("hl2")
+        .expect("Failed to extract hl2 prices");
 
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(4, 0));
     group.warm_up_time(Duration::new(2, 0));
+
+    // Benchmark Alligator
+    group.bench_function(BenchmarkId::new("alligator", 0), |b| {
+        b.iter(|| calculate_alligator(black_box(&hl2_prices)).expect("Failed to calculate alligator"))
+    });
 
     // Benchmark ADXR
     group.bench_function(BenchmarkId::new("ADXR", 0), |b| {
