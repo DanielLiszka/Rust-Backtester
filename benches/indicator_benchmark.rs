@@ -30,8 +30,8 @@ fn benchmark_indicators(c: &mut Criterion) {
         .expect("Failed to extract hl2 prices");
 
     let mut group = c.benchmark_group("Indicator Benchmarks");
-    group.measurement_time(Duration::new(4, 0));
-    group.warm_up_time(Duration::new(2, 0));
+    group.measurement_time(Duration::new(10, 0));
+    group.warm_up_time(Duration::new(5, 0));
 
     // Benchmark Alligator
     group.bench_function(BenchmarkId::new("alligator", 0), |b| {
@@ -87,3 +87,5 @@ fn benchmark_indicators(c: &mut Criterion) {
 
 criterion_group!(benches, benchmark_indicators);
 criterion_main!(benches);
+
+

@@ -1,47 +1,47 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
-use std::collections::VecDeque;
 
-#[inline]
+#[inline(always)]
 pub fn calculate_adxr(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+    let high = candles.select_candle_field("high")?;
+    let low = candles.select_candle_field("low")?;
+    let close = candles.select_candle_field("close")?;
 
-    let high: &[f64] = candles.select_candle_field("high")?;
-    let low: &[f64] = candles.select_candle_field("low")?;
-    let close: &[f64] = candles.select_candle_field("close")?;
-
-    let close_len: usize = close.len();
-    if period == 0 || period > close_len {
+    let len = close.len();
+    if period == 0 || period > len {
         return Err("Invalid period specified for adxr calculation.".into());
     }
 
-    let len = close_len;
     if len < period + 1 {
         return Err("Not enough data points to calculate adxr.".into());
     }
 
     let period_f64 = period as f64;
-    let reciprocal_period = 1.0 / period_f64;
+    let rp = 1.0 / period_f64;
 
-    let mut tr_sum: f64 = 0.0;
-    let mut plus_dm_sum: f64 = 0.0;
-    let mut minus_dm_sum: f64 = 0.0;
+    // Initial sums for TR, plusDM, minusDM over the first `period` bars
+    let mut tr_sum = 0.0;
+    let mut plus_dm_sum = 0.0;
+    let mut minus_dm_sum = 0.0;
 
     for i in 1..=period {
+        let prev_close = close[i - 1];
         let current_high = high[i];
         let current_low = low[i];
-        let prev_close = close[i - 1];
-        let prev_high = high[i - 1];
-        let prev_low = low[i - 1];
 
         let tr = (current_high - current_low)
             .max((current_high - prev_close).abs())
             .max((current_low - prev_close).abs());
 
-        let up_move = current_high - prev_high;
-        let down_move = prev_low - current_low;
+        let up_move = current_high - high[i - 1];
+        let down_move = low[i - 1] - current_low;
 
-        plus_dm_sum += if up_move > down_move && up_move > 0.0 { up_move } else { 0.0 };
-        minus_dm_sum += if down_move > up_move && down_move > 0.0 { down_move } else { 0.0 };
+        if up_move > down_move && up_move > 0.0 {
+            plus_dm_sum += up_move;
+        }
+        if down_move > up_move && down_move > 0.0 {
+            minus_dm_sum += down_move;
+        }
 
         tr_sum += tr;
     }
@@ -53,43 +53,42 @@ pub fn calculate_adxr(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<
     let mut plus_di_prev = if atr != 0.0 { (plus_dm_smooth / atr) * 100.0 } else { 0.0 };
     let mut minus_di_prev = if atr != 0.0 { (minus_dm_smooth / atr) * 100.0 } else { 0.0 };
 
-    let initial_dx: f64 = if (plus_di_prev + minus_di_prev) != 0.0 {
+    let initial_dx = if plus_di_prev + minus_di_prev != 0.0 {
         ((plus_di_prev - minus_di_prev).abs() / (plus_di_prev + minus_di_prev)) * 100.0
     } else {
         0.0
     };
+
+    // We'll store all ADX values after we have them
+    // First we must accumulate dx values until we have `period` of them.
     let mut dx_sum = initial_dx;
     let mut dx_count = 1;
-
     let mut adx = Vec::with_capacity(len - period);
-    let mut adxr = Vec::with_capacity(len - period - period);
-    let mut adx_buffer: VecDeque<f64> = VecDeque::with_capacity(period);
 
+    // Compute DX and then ADX
     for i in (period + 1)..len {
-        let current_high: f64 = high[i];
-        let current_low: f64 = low[i];
-        let prev_close: f64 = close[i - 1];
-        let prev_high: f64 = high[i - 1];
-        let prev_low: f64 = low[i - 1];
+        let prev_close = close[i - 1];
+        let current_high = high[i];
+        let current_low = low[i];
 
-        let tr: f64 = (current_high - current_low)
+        let tr = (current_high - current_low)
             .max((current_high - prev_close).abs())
             .max((current_low - prev_close).abs());
 
-        let up_move = current_high - prev_high;
-        let down_move = prev_low - current_low;
+        let up_move = current_high - high[i - 1];
+        let down_move = low[i - 1] - current_low;
 
         let plus_dm = if up_move > down_move && up_move > 0.0 { up_move } else { 0.0 };
         let minus_dm = if down_move > up_move && down_move > 0.0 { down_move } else { 0.0 };
 
-        atr = atr - atr * reciprocal_period + tr;
-        plus_dm_smooth = plus_dm_smooth - plus_dm_smooth * reciprocal_period + plus_dm;
-        minus_dm_smooth = minus_dm_smooth - minus_dm_smooth * reciprocal_period + minus_dm;
+        atr = atr - (atr * rp) + tr;
+        plus_dm_smooth = plus_dm_smooth - (plus_dm_smooth * rp) + plus_dm;
+        minus_dm_smooth = minus_dm_smooth - (minus_dm_smooth * rp) + minus_dm;
 
         let plus_di_current = if atr != 0.0 { (plus_dm_smooth / atr) * 100.0 } else { 0.0 };
         let minus_di_current = if atr != 0.0 { (minus_dm_smooth / atr) * 100.0 } else { 0.0 };
 
-        let dx = if (plus_di_current + minus_di_current) != 0.0 {
+        let dx = if plus_di_current + minus_di_current != 0.0 {
             ((plus_di_current - minus_di_current).abs() / (plus_di_current + minus_di_current)) * 100.0
         } else {
             0.0
@@ -100,31 +99,33 @@ pub fn calculate_adxr(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<
             dx_count += 1;
 
             if dx_count == period {
-                let first_adx = dx_sum * reciprocal_period;
+                // Compute first ADX
+                let first_adx = dx_sum * rp;
                 adx.push(first_adx);
-                adx_buffer.push_back(first_adx);
-                // ADXR cannot be calculated yet as we need adxr_period ADX values
             }
         } else {
-            let adx_current = (adx[adx.len() - 1] * (period as f64 - 1.0) + dx) * reciprocal_period;
+            // Subsequent ADX values are smoothed:
+            let previous_adx = *adx.last().unwrap();
+            let adx_current = ((previous_adx * (period_f64 - 1.0)) + dx) * rp;
             adx.push(adx_current);
-
-            // Compute ADXR if enough ADX values are available
-            if adx_buffer.len() == period {
-                let adxr_value = (adx_current + adx_buffer.pop_front().unwrap()) / 2.0;
-                adxr.push(adxr_value);
-            }
-
-            adx_buffer.push_back(adx_current);
         }
+    }
+
+    // Now compute ADXR:
+    // ADXR[i] = (ADX[i] + ADX[i - period]) / 2
+    // We have `adx` length = (len - period), so ADXR length = (len - 2*period)
+    let mut adxr = Vec::with_capacity(adx.len() - period);
+    for i in period..adx.len() {
+        adxr.push((adx[i] + adx[i - period]) / 2.0);
     }
 
     Ok(adxr)
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{load_test_candles, Candles};
+    use crate::indicators::data_loader::load_test_candles;
 
     #[test]
     fn test_adxr_accuracy() {
