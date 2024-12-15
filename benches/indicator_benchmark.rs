@@ -3,7 +3,7 @@ extern crate lazy_static;
 extern crate my_project;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use my_project::indicators::data_loader::{Candles, BENCH_CANDLES};
+use my_project::indicators::data_loader::{read_candles_from_csv, Candles};
 use my_project::indicators::{
     acosc::calculate_acosc, ad::calculate_ad, ema::calculate_ema, rsi::calculate_rsi,
     sma::calculate_sma, adx::calculate_adx, adxr::calculate_adxr, alligator::calculate_alligator,
@@ -18,8 +18,8 @@ fn benchmark_indicators(c: &mut Criterion) {
     let period_adx: usize = 14;
     let period_adxr: usize = 14;
 
-    // Access the loaded candles directly
-    let candles: &Candles = &*BENCH_CANDLES;
+    let candles = read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
+        .expect("Failed to load candles");
 
     // Pre-extract the "close" field once before benchmarking
     let close_prices = candles

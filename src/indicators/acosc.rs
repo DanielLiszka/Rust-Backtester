@@ -127,11 +127,11 @@ pub fn calculate_acosc(candles: &Candles) -> Result<AC, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_acosc_accuracy() {
-        let candles = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
         let acosc_result: AC = calculate_acosc(&candles).expect("Failed to calculate acosc");
         let expected_last_five_acosc_osc = vec![273.30, 383.72, 357.7, 291.25, 176.84];
         let expected_last_five_acosc_change = vec![49.6, 110.4, -26.0, -66.5, -114.4];

@@ -113,11 +113,11 @@ pub fn calculate_adx(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<d
 
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_ad_accuracy() {
-        let candles: std::sync::MutexGuard<'_, Candles> = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
         let period: usize = 14;
         let ad_result: Vec<f64> = calculate_adx(&candles,period).expect("Failed to calculate adx");
 

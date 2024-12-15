@@ -3,31 +3,11 @@ extern crate lazy_static;
 extern crate serde;
 
 use csv::ReaderBuilder;
-use lazy_static::lazy_static;
 use std::error::Error;
 use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
 
 static LOAD_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-lazy_static! {
-    pub static ref TEST_CANDLES: Mutex<Candles> = Mutex::new(load_candles().unwrap());
-}
-
-
-lazy_static! {
-    pub static ref BENCH_CANDLES: Candles = {
-        let candles =
-            read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
-                .expect("Failed to load candles");
-        println!(
-            "Candles loaded {} times.",
-            LOAD_COUNTER.load(Ordering::SeqCst)
-        );
-        candles
-    };
-}
 
 pub struct Candles {
     pub timestamp: Vec<f64>,
@@ -148,30 +128,10 @@ pub fn read_candles_from_csv(file_path: &str) -> Result<Candles, Box<dyn Error>>
     Ok(Candles::new(timestamp, open, high, low, close, volume))
 }
 
-// Function to load candles from a specific CSV file and return a Candles struct
-pub fn load_candles() -> Result<Candles, Box<dyn Error>> {
-    let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
-    let file = File::open(file_path)?;
-    let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
+pub fn load_bench_candles() -> Result<Candles, Box<dyn std::error::Error>> {
+    read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
+}
 
-    let mut timestamp = Vec::new();
-    let mut open = Vec::new();
-    let mut high = Vec::new();
-    let mut low = Vec::new();
-    let mut close = Vec::new();
-    let mut volume = Vec::new();
-
-    for result in rdr.records() {
-        let record = result?;
-        timestamp.push(record[1].parse()?);
-        open.push(record[2].parse()?);
-        high.push(record[3].parse()?);
-        low.push(record[4].parse()?);
-        close.push(record[5].parse()?);
-        volume.push(record[6].parse()?);
-    }
-
-    LOAD_COUNTER.fetch_add(1, Ordering::SeqCst);
-
-    Ok(Candles::new(timestamp, open, high, low, close, volume))
+pub fn load_test_candles() -> Result<Candles, Box<dyn std::error::Error>> {
+    read_candles_from_csv("src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv")
 }

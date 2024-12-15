@@ -23,11 +23,11 @@ pub fn calculate_ema(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Er
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_ema_accuracy() {
-        let candles = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
         let close_prices = candles
             .select_candle_field("close")
             .expect("Failed to extract close prices");

@@ -32,11 +32,11 @@ pub fn calculate_ad(candles: &Candles) -> Result<Vec<f64>, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_ad_accuracy() {
-        let candles = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
         let ad_result = calculate_ad(&candles).expect("Failed to calculate AD");
 
         let expected_last_five_ad = vec![

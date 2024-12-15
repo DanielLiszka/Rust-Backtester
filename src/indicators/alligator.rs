@@ -106,11 +106,11 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
 }
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_alligator_accuracy() {
-        let candles = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
         let hl2_prices: Vec<f64> = candles
             .get_calculated_field("hl2")
             .expect("Failed to extract hl2 prices");

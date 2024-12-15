@@ -25,12 +25,12 @@ pub fn calculate_sma(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Er
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::TEST_CANDLES;
+    use crate::indicators::data_loader::{load_test_candles, Candles};
 
     #[test]
     fn test_sma_accuracy() {
         // Lock the TEST_CANDLES mutex to safely access the data
-        let candles = TEST_CANDLES.lock().unwrap();
+        let candles = load_test_candles().expect("Failed to load test candles");
 
         // Use the select_candle_field method from the Candles struct
         let close_prices = candles
