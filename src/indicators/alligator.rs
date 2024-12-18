@@ -1,21 +1,92 @@
-use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
-pub struct Alligator {
+#[derive(Debug, Clone)]
+pub struct AlligatorParams {
+    pub jaw_period: Option<usize>,
+    pub jaw_offset: Option<usize>,
+    pub teeth_period: Option<usize>,
+    pub teeth_offset: Option<usize>,
+    pub lips_period: Option<usize>,
+    pub lips_offset: Option<usize>,
+}
+
+impl Default for AlligatorParams {
+    fn default() -> Self {
+        // Default values from original code:
+        // JAW_PERIOD = 13, JAW_OFFSET = 8
+        // TEETH_PERIOD = 8, TEETH_OFFSET = 5
+        // LIPS_PERIOD = 5, LIPS_OFFSET = 3
+        AlligatorParams {
+            jaw_period: Some(13),
+            jaw_offset: Some(8),
+            teeth_period: Some(8),
+            teeth_offset: Some(5),
+            lips_period: Some(5),
+            lips_offset: Some(3),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AlligatorInput<'a> {
+    pub data: &'a [f64],
+    pub params: AlligatorParams,
+}
+
+impl<'a> AlligatorInput<'a> {
+    pub fn new(data: &'a [f64], params: AlligatorParams) -> Self {
+        AlligatorInput { data, params }
+    }
+
+    pub fn with_default_params(data: &'a [f64]) -> Self {
+        AlligatorInput {
+            data,
+            params: AlligatorParams::default(),
+        }
+    }
+
+    fn get_jaw_period(&self) -> usize {
+        self.params.jaw_period.unwrap_or_else(|| AlligatorParams::default().jaw_period.unwrap())
+    }
+
+    fn get_jaw_offset(&self) -> usize {
+        self.params.jaw_offset.unwrap_or_else(|| AlligatorParams::default().jaw_offset.unwrap())
+    }
+
+    fn get_teeth_period(&self) -> usize {
+        self.params.teeth_period.unwrap_or_else(|| AlligatorParams::default().teeth_period.unwrap())
+    }
+
+    fn get_teeth_offset(&self) -> usize {
+        self.params.teeth_offset.unwrap_or_else(|| AlligatorParams::default().teeth_offset.unwrap())
+    }
+
+    fn get_lips_period(&self) -> usize {
+        self.params.lips_period.unwrap_or_else(|| AlligatorParams::default().lips_period.unwrap())
+    }
+
+    fn get_lips_offset(&self) -> usize {
+        self.params.lips_offset.unwrap_or_else(|| AlligatorParams::default().lips_offset.unwrap())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AlligatorOutput {
     pub jaw: Vec<f64>,
     pub teeth: Vec<f64>,
     pub lips: Vec<f64>,
 }
 
-pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
-    const JAW_PERIOD: usize = 13;
-    const JAW_OFFSET: usize = 8;
-    const TEETH_PERIOD: usize = 8;
-    const TEETH_OFFSET: usize = 5;
-    const LIPS_PERIOD: usize = 5;
-    const LIPS_OFFSET: usize = 3;
-
+pub fn calculate_alligator(input: &AlligatorInput) -> Result<AlligatorOutput, Box<dyn Error>> {
+    let data = input.data;
     let len = data.len();
+
+    let jaw_period = input.get_jaw_period();
+    let jaw_offset = input.get_jaw_offset();
+    let teeth_period = input.get_teeth_period();
+    let teeth_offset = input.get_teeth_offset();
+    let lips_period = input.get_lips_period();
+    let lips_offset = input.get_lips_offset();
 
     let mut jaw = vec![f64::NAN; len];
     let mut teeth = vec![f64::NAN; len];
@@ -25,7 +96,6 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
     let mut teeth_sum = 0.0;
     let mut lips_sum = 0.0;
 
-    // State variables for SMMA calculations
     let mut jaw_smma_val = 0.0;
     let mut teeth_smma_val = 0.0;
     let mut lips_smma_val = 0.0;
@@ -34,36 +104,34 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
     let mut teeth_ready = false;
     let mut lips_ready = false;
 
-    let jaw_scale = (JAW_PERIOD - 1) as f64;
-    let jaw_inv_period = 1.0 / (JAW_PERIOD as f64);
+    let jaw_scale = (jaw_period - 1) as f64;
+    let jaw_inv_period = 1.0 / jaw_period as f64;
 
-    let teeth_scale = (TEETH_PERIOD - 1) as f64;
-    let teeth_inv_period = 1.0 / (TEETH_PERIOD as f64);
+    let teeth_scale = (teeth_period - 1) as f64;
+    let teeth_inv_period = 1.0 / teeth_period as f64;
 
-    let lips_scale = (LIPS_PERIOD - 1) as f64;
-    let lips_inv_period = 1.0 / (LIPS_PERIOD as f64);
+    let lips_scale = (lips_period - 1) as f64;
+    let lips_inv_period = 1.0 / lips_period as f64;
 
     for i in 0..len {
         let data_point = data[i];
 
         // JAW calculation
         if !jaw_ready {
-            // Still initializing
-            if i < JAW_PERIOD {
+            if i < jaw_period {
                 jaw_sum += data_point;
-                if i == JAW_PERIOD - 1 {
-                    jaw_smma_val = jaw_sum / (JAW_PERIOD as f64);
+                if i == jaw_period - 1 {
+                    jaw_smma_val = jaw_sum / (jaw_period as f64);
                     jaw_ready = true;
-                    let shifted_index = i + JAW_OFFSET;
+                    let shifted_index = i + jaw_offset;
                     if shifted_index < len {
                         jaw[shifted_index] = jaw_smma_val;
                     }
                 }
             }
         } else {
-            // Update JAW SMMA once initialized
             jaw_smma_val = (jaw_smma_val * jaw_scale + data_point) * jaw_inv_period;
-            let shifted_index = i + JAW_OFFSET;
+            let shifted_index = i + jaw_offset;
             if shifted_index < len {
                 jaw[shifted_index] = jaw_smma_val;
             }
@@ -71,13 +139,12 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
 
         // TEETH calculation
         if !teeth_ready {
-            // Still initializing
-            if i < TEETH_PERIOD {
+            if i < teeth_period {
                 teeth_sum += data_point;
-                if i == TEETH_PERIOD - 1 {
-                    teeth_smma_val = teeth_sum / (TEETH_PERIOD as f64);
+                if i == teeth_period - 1 {
+                    teeth_smma_val = teeth_sum / (teeth_period as f64);
                     teeth_ready = true;
-                    let shifted_index = i + TEETH_OFFSET;
+                    let shifted_index = i + teeth_offset;
                     if shifted_index < len {
                         teeth[shifted_index] = teeth_smma_val;
                     }
@@ -85,7 +152,7 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
             }
         } else {
             teeth_smma_val = (teeth_smma_val * teeth_scale + data_point) * teeth_inv_period;
-            let shifted_index = i + TEETH_OFFSET;
+            let shifted_index = i + teeth_offset;
             if shifted_index < len {
                 teeth[shifted_index] = teeth_smma_val;
             }
@@ -93,13 +160,12 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
 
         // LIPS calculation
         if !lips_ready {
-            // Still initializing
-            if i < LIPS_PERIOD {
+            if i < lips_period {
                 lips_sum += data_point;
-                if i == LIPS_PERIOD - 1 {
-                    lips_smma_val = lips_sum / (LIPS_PERIOD as f64);
+                if i == lips_period - 1 {
+                    lips_smma_val = lips_sum / (lips_period as f64);
                     lips_ready = true;
-                    let shifted_index = i + LIPS_OFFSET;
+                    let shifted_index = i + lips_offset;
                     if shifted_index < len {
                         lips[shifted_index] = lips_smma_val;
                     }
@@ -107,28 +173,32 @@ pub fn calculate_alligator(data: &[f64]) -> Result<Alligator, Box<dyn Error>> {
             }
         } else {
             lips_smma_val = (lips_smma_val * lips_scale + data_point) * lips_inv_period;
-            let shifted_index = i + LIPS_OFFSET;
+            let shifted_index = i + lips_offset;
             if shifted_index < len {
                 lips[shifted_index] = lips_smma_val;
             }
         }
     }
 
-    Ok(Alligator { jaw, teeth, lips })
+    Ok(AlligatorOutput { jaw, teeth, lips })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::load_test_candles;
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_alligator_accuracy() {
-        let candles = load_test_candles().expect("Failed to load test candles");
+        let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
+        let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
         let hl2_prices: Vec<f64> = candles
             .get_calculated_field("hl2")
             .expect("Failed to extract hl2 prices");
-        let result: Alligator = calculate_alligator(&hl2_prices).expect("Failed to calculate alligator");
+
+        // Use default parameters (original constants)
+        let input = AlligatorInput::with_default_params(&hl2_prices);
+        let result = calculate_alligator(&input).expect("Failed to calculate alligator");
 
         let expected_last_five_jaw_result = vec![60742.4, 60632.6, 60555.1, 60442.7, 60308.7];
         let expected_last_five_teeth_result = vec![59908.0, 59757.2, 59684.3, 59653.5, 59621.1];
@@ -171,5 +241,13 @@ mod tests {
                 value
             );
         }
+
+        // Example of customizing parameters if needed:
+        let custom_params = AlligatorParams {
+            jaw_period: Some(14), // Just an example of a custom parameter
+            ..AlligatorParams::default()
+        };
+        let custom_input = AlligatorInput::new(&hl2_prices, custom_params);
+        let _ = calculate_alligator(&custom_input).expect("Alligator calculation with custom params failed");
     }
 }

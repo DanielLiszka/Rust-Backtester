@@ -7,8 +7,10 @@ use std::error::Error;
 use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+
 static LOAD_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
+#[derive(Debug, Clone)]
 pub struct Candles {
     pub timestamp: Vec<f64>,
     pub open: Vec<f64>,
@@ -126,12 +128,4 @@ pub fn read_candles_from_csv(file_path: &str) -> Result<Candles, Box<dyn Error>>
     LOAD_COUNTER.fetch_add(1, Ordering::SeqCst);
 
     Ok(Candles::new(timestamp, open, high, low, close, volume))
-}
-
-pub fn load_bench_candles() -> Result<Candles, Box<dyn std::error::Error>> {
-    read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
-}
-
-pub fn load_test_candles() -> Result<Candles, Box<dyn std::error::Error>> {
-    read_candles_from_csv("src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv")
 }

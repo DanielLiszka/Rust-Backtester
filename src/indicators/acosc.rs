@@ -1,13 +1,45 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
-#[derive(Debug)]
-pub struct AC {
+#[derive(Debug, Clone)]
+pub struct AcoscParams {
+    // Currently no parameters. Can be extended in the future if needed.
+}
+
+impl Default for AcoscParams {
+    fn default() -> Self {
+        AcoscParams {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AcoscInput<'a> {
+    pub candles: &'a Candles,
+    pub params: AcoscParams,
+}
+
+impl<'a> AcoscInput<'a> {
+    pub fn new(candles: &'a Candles, params: AcoscParams) -> Self {
+        AcoscInput { candles, params }
+    }
+
+    pub fn with_default_params(candles: &'a Candles) -> Self {
+        AcoscInput {
+            candles,
+            params: AcoscParams::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AcoscOutput {
     pub osc: Vec<f64>,
     pub change: Vec<f64>,
 }
 
-pub fn calculate_acosc(candles: &Candles) -> Result<AC, Box<dyn Error>> {
+pub fn calculate_acosc(input: &AcoscInput) -> Result<AcoscOutput, Box<dyn Error>> {
+    let candles = input.candles;
+
     let high_prices = candles.select_candle_field("high")?;
     let low_prices = candles.select_candle_field("low")?;
 
@@ -122,17 +154,23 @@ pub fn calculate_acosc(candles: &Candles) -> Result<AC, Box<dyn Error>> {
         change.push(mom);
     }
 
-    Ok(AC { osc, change })
+    Ok(AcoscOutput { osc, change })
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{load_test_candles, Candles};
+    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
 
     #[test]
     fn test_acosc_accuracy() {
-        let candles = load_test_candles().expect("Failed to load test candles");
-        let acosc_result: AC = calculate_acosc(&candles).expect("Failed to calculate acosc");
+        let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
+        let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
+
+        // Use default parameters
+        let input = AcoscInput::with_default_params(&candles);
+        let acosc_result = calculate_acosc(&input).expect("Failed to calculate acosc");
+
         let expected_last_five_acosc_osc = vec![273.30, 383.72, 357.7, 291.25, 176.84];
         let expected_last_five_acosc_change = vec![49.6, 110.4, -26.0, -66.5, -114.4];
 

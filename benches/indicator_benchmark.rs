@@ -4,24 +4,26 @@ extern crate my_project;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use my_project::indicators::data_loader::{read_candles_from_csv, Candles};
+
 use my_project::indicators::{
-    acosc::calculate_acosc, ad::calculate_ad, ema::calculate_ema, rsi::calculate_rsi,
-    sma::calculate_sma, adx::calculate_adx, adxr::calculate_adxr, alligator::calculate_alligator,
+    acosc::{calculate_acosc, AcoscInput},
+    ad::{calculate_ad, AdInput},
+    adx::{calculate_adx, AdxInput},
+    adxr::{calculate_adxr, AdxrInput},
+    alligator::{calculate_alligator, AlligatorInput},
+    ema::{calculate_ema, EmaInput},
+    rsi::{calculate_rsi, RsiInput},
+    sma::{calculate_sma, SmaInput},
 };
 use std::time::Duration;
 
 fn benchmark_indicators(c: &mut Criterion) {
-    // Define periods for each indicator
-    let period_sma: usize = 9;
-    let period_ema: usize = 9;
-    let period_rsi: usize = 14;
-    let period_adx: usize = 14;
-    let period_adxr: usize = 14;
-
+    // Load candles once
     let candles = read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
         .expect("Failed to load candles");
 
-    // Pre-extract the "close" field once before benchmarking
+    // Pre-extract derived data if needed
+    // But now we always construct Inputs directly from Candles or slices
     let close_prices = candles
         .select_candle_field("close")
         .expect("Failed to extract close prices");
@@ -33,53 +35,52 @@ fn benchmark_indicators(c: &mut Criterion) {
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
 
-    // Benchmark Alligator
-    group.bench_function(BenchmarkId::new("alligator", 0), |b| {
-        b.iter(|| calculate_alligator(black_box(&hl2_prices)).expect("Failed to calculate alligator"))
+    // Alligator
+    group.bench_function(BenchmarkId::new("ALLIGATOR", 0), |b| {
+        let input = AlligatorInput::with_default_params(&hl2_prices);
+        b.iter(|| calculate_alligator(black_box(&input)).expect("Failed to calculate alligator"))
     });
 
-    // Benchmark ADXR
+    // ADXR
     group.bench_function(BenchmarkId::new("ADXR", 0), |b| {
-        b.iter(|| calculate_adxr(black_box(&candles), black_box(period_adxr)).expect("Failed to calculate ADXR"))
+        let input = AdxrInput::with_default_params(&candles);
+        b.iter(|| calculate_adxr(black_box(&input)).expect("Failed to calculate ADXR"))
     });
 
-    // Benchmark ADX
+    // ADX
     group.bench_function(BenchmarkId::new("ADX", 0), |b| {
-        b.iter(|| calculate_adx(black_box(&candles), black_box(period_adx)).expect("Failed to calculate ADX"))
+        let input = AdxInput::with_default_params(&candles);
+        b.iter(|| calculate_adx(black_box(&input)).expect("Failed to calculate ADX"))
     });
 
-    // Benchmark SMA
-    group.bench_function(BenchmarkId::new("SMA_close_9", period_sma), |b| {
-        b.iter(|| {
-            calculate_sma(black_box(&close_prices), black_box(period_sma))
-                .expect("Failed to calculate SMA")
-        })
+    // SMA
+    group.bench_function(BenchmarkId::new("SMA", 0), |b| {
+        let input = SmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_sma(black_box(&input)).expect("Failed to calculate SMA"))
     });
 
-    // Benchmark EMA
-    group.bench_function(BenchmarkId::new("EMA_close_9", period_ema), |b| {
-        b.iter(|| {
-            calculate_ema(black_box(&close_prices), black_box(period_ema))
-                .expect("Failed to calculate EMA")
-        })
+    // EMA
+    group.bench_function(BenchmarkId::new("EMA", 0), |b| {
+        let input = EmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_ema(black_box(&input)).expect("Failed to calculate EMA"))
     });
 
-    // Benchmark RSI
-    group.bench_function(BenchmarkId::new("RSI_close_14", period_rsi), |b| {
-        b.iter(|| {
-            calculate_rsi(black_box(&close_prices), black_box(period_rsi))
-                .expect("Failed to calculate RSI")
-        })
+    // RSI
+    group.bench_function(BenchmarkId::new("RSI", 0), |b| {
+        let input = RsiInput::with_default_params(&close_prices);
+        b.iter(|| calculate_rsi(black_box(&input)).expect("Failed to calculate RSI"))
     });
 
-    // Benchmark ACOSC
+    // ACOSC
     group.bench_function(BenchmarkId::new("ACOSC", 0), |b| {
-        b.iter(|| calculate_acosc(black_box(&candles)).expect("Failed to calculate ACOSC"))
+        let input = AcoscInput::with_default_params(&candles);
+        b.iter(|| calculate_acosc(black_box(&input)).expect("Failed to calculate ACOSC"))
     });
 
-    // Benchmark AD
+    // AD
     group.bench_function(BenchmarkId::new("AD", 0), |b| {
-        b.iter(|| calculate_ad(black_box(&candles)).expect("Failed to calculate AD"))
+        let input = AdInput::with_default_params(&candles);
+        b.iter(|| calculate_ad(black_box(&input)).expect("Failed to calculate AD"))
     });
 
     group.finish();
@@ -87,5 +88,3 @@ fn benchmark_indicators(c: &mut Criterion) {
 
 criterion_group!(benches, benchmark_indicators);
 criterion_main!(benches);
-
-

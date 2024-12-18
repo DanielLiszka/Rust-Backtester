@@ -1,7 +1,44 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
-pub fn calculate_ad(candles: &Candles) -> Result<Vec<f64>, Box<dyn Error>> {
+#[derive(Debug, Clone)]
+pub struct AdParams {
+    // Currently no parameters for AD, but we keep this struct
+    // in case we add parameters in the future.
+}
+
+impl Default for AdParams {
+    fn default() -> Self {
+        AdParams {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdInput<'a> {
+    pub candles: &'a Candles,
+    pub params: AdParams,
+}
+
+impl<'a> AdInput<'a> {
+    pub fn new(candles: &'a Candles, params: AdParams) -> Self {
+        AdInput { candles, params }
+    }
+
+    pub fn with_default_params(candles: &'a Candles) -> Self {
+        AdInput {
+            candles,
+            params: AdParams::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdOutput {
+    pub values: Vec<f64>,
+}
+
+pub fn calculate_ad(input: &AdInput) -> Result<AdOutput, Box<dyn Error>> {
+    let candles = input.candles;
     let high: &[f64] = candles.select_candle_field("high")?;
     let low: &[f64] = candles.select_candle_field("low")?;
     let close: &[f64] = candles.select_candle_field("close")?;
@@ -11,33 +48,37 @@ pub fn calculate_ad(candles: &Candles) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut output: Vec<f64> = Vec::with_capacity(size);
     let mut sum: f64 = 0.0;
 
-    for ((&high, &low), (&close, &volume)) in high
+    for ((&h, &l), (&c, &v)) in high
         .iter()
         .zip(low.iter())
         .zip(close.iter().zip(volume.iter()))
     {
-        let hl = high - low;
+        let hl = h - l;
 
         if hl != 0.0 {
-            let mfm: f64 = ((close - low) - (high - close)) / hl;
-            let mfv: f64 = mfm * volume;
+            let mfm: f64 = ((c - l) - (h - c)) / hl;
+            let mfv: f64 = mfm * v;
             sum += mfv;
         }
         output.push(sum);
     }
 
-    Ok(output)
+    Ok(AdOutput { values: output })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{load_test_candles, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_ad_accuracy() {
-        let candles = load_test_candles().expect("Failed to load test candles");
-        let ad_result = calculate_ad(&candles).expect("Failed to calculate AD");
+        let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
+        let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
+
+        // Using default parameters
+        let input = AdInput::with_default_params(&candles);
+        let ad_result = calculate_ad(&input).expect("Failed to calculate AD");
 
         let expected_last_five_ad = vec![
             1645918.16,
@@ -48,12 +89,12 @@ mod tests {
         ];
 
         assert!(
-            ad_result.len() >= 5,
+            ad_result.values.len() >= 5,
             "Not enough AD values for the test"
         );
 
-        let start_index = ad_result.len() - 5;
-        let result_last_five_ad = &ad_result[start_index..];
+        let start_index = ad_result.values.len() - 5;
+        let result_last_five_ad = &ad_result.values[start_index..];
 
         for (i, &value) in result_last_five_ad.iter().enumerate() {
             let expected_value = expected_last_five_ad[i];

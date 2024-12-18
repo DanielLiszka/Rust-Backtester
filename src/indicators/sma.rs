@@ -1,7 +1,53 @@
 use std::error::Error;
 
+#[derive(Debug, Clone)]
+pub struct SmaParams {
+    pub period: Option<usize>,
+}
+
+impl Default for SmaParams {
+    fn default() -> Self {
+        // Default to a 14-period SMA if not specified
+        SmaParams { period: Some(9) }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SmaInput<'a> {
+    pub data: &'a [f64],
+    pub params: SmaParams,
+}
+
+impl<'a> SmaInput<'a> {
+    pub fn new(data: &'a [f64], params: SmaParams) -> Self {
+        SmaInput { data, params }
+    }
+
+    // Convenience constructor that uses default params if none provided
+    pub fn with_default_params(data: &'a [f64]) -> Self {
+        SmaInput {
+            data,
+            params: SmaParams::default(),
+        }
+    }
+
+    // Resolve the parameters. If the user didn't specify a period,
+    // fallback to the default in `SmaParams::default()`.
+    fn get_period(&self) -> usize {
+        self.params.period.unwrap_or_else(|| SmaParams::default().period.unwrap())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SmaOutput {
+    pub values: Vec<f64>,
+}
+
 #[inline]
-pub fn calculate_sma(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn calculate_sma(input: &SmaInput) -> Result<SmaOutput, Box<dyn Error>> {
+    let data = input.data;
+    let period = input.get_period();
+
     if period == 0 || period > data.len() {
         return Err("Invalid period specified for SMA calculation.".into());
     }
@@ -10,7 +56,6 @@ pub fn calculate_sma(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Er
     let mut sma_values = Vec::with_capacity(output_len);
 
     let inv_period = 1.0 / period as f64;
-
     let mut sum: f64 = data[..period].iter().sum();
     sma_values.push(sum * inv_period);
 
@@ -19,37 +64,37 @@ pub fn calculate_sma(data: &[f64], period: usize) -> Result<Vec<f64>, Box<dyn Er
         sma_values.push(sum * inv_period);
     }
 
-    Ok(sma_values)
+    Ok(SmaOutput { values: sma_values })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{load_test_candles, Candles};
+    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
 
     #[test]
     fn test_sma_accuracy() {
-        // Lock the TEST_CANDLES mutex to safely access the data
-        let candles = load_test_candles().expect("Failed to load test candles");
-
-        // Use the select_candle_field method from the Candles struct
+        let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
+        let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
         let close_prices = candles
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        let period = 9;
-        let sma_result = calculate_sma(&close_prices, period).expect("Failed to calculate SMA");
+        // Example: user provides explicit params
+        let params = SmaParams { period: Some(9) };
+        let input = SmaInput::new(&close_prices, params);
+        let sma_result = calculate_sma(&input).expect("Failed to calculate SMA");
 
-        // Expected SMA values (these should be updated to match your actual data)
+        // Expected SMA values (update these to match your actual data)
         let expected_last_five_sma = vec![59180.8, 59175.0, 59129.4, 59085.4, 59133.7];
 
         assert!(
-            sma_result.len() >= 5,
+            sma_result.values.len() >= 5,
             "Not enough SMA values for the test"
         );
 
-        let start_index = sma_result.len() - 5;
-        let result_last_five_sma = &sma_result[start_index..];
+        let start_index = sma_result.values.len() - 5;
+        let result_last_five_sma = &sma_result.values[start_index..];
 
         for (i, &value) in result_last_five_sma.iter().enumerate() {
             let expected_value = expected_last_five_sma[i];
@@ -61,5 +106,10 @@ mod tests {
                 value
             );
         }
+
+        // Example: user provides no params (defaults to 14)
+        let default_input = SmaInput::with_default_params(&close_prices);
+        let default_sma_result = calculate_sma(&default_input).expect("Failed to calculate SMA with defaults");
+        assert!(!default_sma_result.values.is_empty(), "Should produce some SMA values with default params");
     }
 }

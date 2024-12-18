@@ -1,8 +1,53 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
+#[derive(Debug, Clone)]
+pub struct AdxParams {
+    pub period: Option<usize>,
+}
+
+impl Default for AdxParams {
+    fn default() -> Self {
+        // Common default period for ADX is often 14
+        AdxParams { period: Some(14) }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdxInput<'a> {
+    pub candles: &'a Candles,
+    pub params: AdxParams,
+}
+
+impl<'a> AdxInput<'a> {
+    pub fn new(candles: &'a Candles, params: AdxParams) -> Self {
+        AdxInput { candles, params }
+    }
+
+    pub fn with_default_params(candles: &'a Candles) -> Self {
+        AdxInput {
+            candles,
+            params: AdxParams::default(),
+        }
+    }
+
+    fn get_period(&self) -> usize {
+        self.params
+            .period
+            .unwrap_or_else(|| AdxParams::default().period.unwrap())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AdxOutput {
+    pub values: Vec<f64>,
+}
+
 #[inline]
-pub fn calculate_adx(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn calculate_adx(input: &AdxInput) -> Result<AdxOutput, Box<dyn Error>> {
+    let candles = input.candles;
+    let period = input.get_period();
+
     let high = candles.select_candle_field("high")?;
     let low = candles.select_candle_field("low")?;
     let close = candles.select_candle_field("close")?;
@@ -54,7 +99,6 @@ pub fn calculate_adx(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<d
     let mut plus_dm_smooth = plus_dm_sum;
     let mut minus_dm_smooth = minus_dm_sum;
 
-    // With real data, ATR should never be zero after initialization. We skip the check.
     let plus_di_prev = (plus_dm_smooth / atr) * 100.0;
     let minus_di_prev = (minus_dm_smooth / atr) * 100.0;
 
@@ -69,7 +113,6 @@ pub fn calculate_adx(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<d
     let mut dx_count = 1;
     let mut adx = Vec::with_capacity(len - period);
 
-    // We'll track the last ADX value in a variable to avoid repeated indexing
     let mut last_adx = 0.0;
     let mut have_adx = false;
 
@@ -114,36 +157,37 @@ pub fn calculate_adx(candles: &Candles, period: usize) -> Result<Vec<f64>, Box<d
                 adx.push(last_adx);
                 have_adx = true;
             }
-        } else {
-            // Smooth ADX calculation
-            // ADX[i] = ((ADX[i-1]*(period-1)) + DX) / period
-            // Use last_adx from previous iteration
+        } else if have_adx {
             let adx_current = ((last_adx * period_minus_one) + dx) * reciprocal_period;
             adx.push(adx_current);
             last_adx = adx_current;
         }
     }
 
-    Ok(adx)
+    Ok(AdxOutput { values: adx })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::load_test_candles;
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_ad_accuracy() {
-        let candles = load_test_candles().expect("Failed to load test candles");
-        let period: usize = 14;
-        let ad_result: Vec<f64> = calculate_adx(&candles, period).expect("Failed to calculate adx");
+        let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
+        let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
+
+        // Use explicit parameters
+        let params = AdxParams { period: Some(14) };
+        let input = AdxInput::new(&candles, params);
+        let ad_result = calculate_adx(&input).expect("Failed to calculate adx");
 
         let expected_last_five_adx = vec![36.14, 36.52, 37.01, 37.46, 38.47];
 
-        assert!(ad_result.len() >= 5, "Not enough adx values for the test");
+        assert!(ad_result.values.len() >= 5, "Not enough adx values for the test");
 
-        let start_index = ad_result.len() - 5;
-        let result_last_five_ad = &ad_result[start_index..];
+        let start_index = ad_result.values.len() - 5;
+        let result_last_five_ad = &ad_result.values[start_index..];
 
         for (i, &value) in result_last_five_ad.iter().enumerate() {
             let expected_value = expected_last_five_adx[i];
@@ -155,5 +199,10 @@ mod tests {
                 value
             );
         }
+
+        // Test with default parameters
+        let default_input = AdxInput::with_default_params(&candles);
+        let default_adx_result = calculate_adx(&default_input).expect("Failed to calculate ADX with defaults");
+        assert!(!default_adx_result.values.is_empty(), "Should produce ADX values with default params");
     }
 }
