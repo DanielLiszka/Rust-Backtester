@@ -7,3 +7,7 @@ pub mod ad;
 pub mod adx;
 pub mod adxr;
 pub mod alligator;
+pub mod zlema;
+pub mod adosc;
+pub mod alma;
+pub mod ao;

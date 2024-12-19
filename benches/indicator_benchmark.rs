@@ -14,6 +14,10 @@ use my_project::indicators::{
     ema::{calculate_ema, EmaInput},
     rsi::{calculate_rsi, RsiInput},
     sma::{calculate_sma, SmaInput},
+    zlema::{calculate_zlema, ZlemaInput},
+    adosc::{calculate_adosc, AdoscInput},
+    alma::{calculate_alma, AlmaInput},
+    ao::{calculate_ao, AoInput},
 };
 use std::time::Duration;
 
@@ -34,6 +38,31 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
+
+    // AO
+    group.bench_function(BenchmarkId::new("AO", 0), |b| {
+        let input = AoInput::with_default_params(&candles);
+        b.iter(|| calculate_ao(black_box(&input)).expect("Failed to calculate AO"))
+    });
+    
+    // ALMA
+    group.bench_function(BenchmarkId::new("ALMA", 0), |b| {
+        let input = AlmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_alma(black_box(&input)).expect("Failed to calculate ALMA"))
+    });
+
+    // ADOSC
+    group.bench_function(BenchmarkId::new("ADOSC", 0), |b| {
+        let input = AdoscInput::with_default_params(&candles);
+        b.iter(|| calculate_adosc(black_box(&input)).expect("Failed to calculate ADOSC"))
+    });
+
+
+    // ZLEMA
+    group.bench_function(BenchmarkId::new("ZLEMA", 0), |b| {
+        let input = ZlemaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_zlema(black_box(&input)).expect("Failed to calculate ZLEMA"))
+    });
 
     // Alligator
     group.bench_function(BenchmarkId::new("ALLIGATOR", 0), |b| {
