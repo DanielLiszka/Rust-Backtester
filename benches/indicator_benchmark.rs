@@ -18,6 +18,8 @@ use my_project::indicators::{
     adosc::{calculate_adosc, AdoscInput},
     alma::{calculate_alma, AlmaInput},
     ao::{calculate_ao, AoInput},
+    apo::{calculate_apo, ApoInput},
+    aroon::{calculate_aroon, AroonInput},
 };
 use std::time::Duration;
 
@@ -38,6 +40,18 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
+
+    // AROON
+    group.bench_function(BenchmarkId::new("AROON", 0), |b| {
+        let input = AroonInput::with_default_params(&candles);
+        b.iter(|| calculate_aroon(black_box(&input)).expect("Failed to calculate AROON"))
+    });
+
+    // APO
+    group.bench_function(BenchmarkId::new("APO", 0), |b| {
+        let input = ApoInput::with_default_params(&candles);
+        b.iter(|| calculate_apo(black_box(&input)).expect("Failed to calculate APO"))
+    });
 
     // AO
     group.bench_function(BenchmarkId::new("AO", 0), |b| {

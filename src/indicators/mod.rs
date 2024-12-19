@@ -11,3 +11,5 @@ pub mod zlema;
 pub mod adosc;
 pub mod alma;
 pub mod ao;
+pub mod apo;
+pub mod aroon;
