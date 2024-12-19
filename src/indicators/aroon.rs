@@ -62,45 +62,40 @@ pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>
     let mut aroon_up = vec![f64::NAN; len];
     let mut aroon_down = vec![f64::NAN; len];
 
-    // We look back length+1 bars including the current one
     let window = length + 1;
+    let inv_length = 1.0 / length as f64;
 
-    for i in 0..len {
-        if i+1 < window {
-            // Not enough data yet
-            continue;
-        }
-
-        let start = i + 1 - window; 
-        // Find highest and lowest in the last length+1 bars
-        let mut highest = high[start];
+    for i in (window - 1)..len {
+        // Compute highest and lowest in [i-(length), i]
+        let start = i + 1 - window;
+        let mut highest_val = high[start];
+        let mut lowest_val = low[start];
         let mut highest_idx = start;
-        let mut lowest = low[start];
         let mut lowest_idx = start;
 
+        // Inline loop for scanning the window
+        // Minimal branching and no iterator overhead
         for j in (start+1)..=i {
             let h_val = high[j];
-            if h_val > highest {
-                highest = h_val;
+            if h_val > highest_val {
+                highest_val = h_val;
                 highest_idx = j;
             }
             let l_val = low[j];
-            if l_val < lowest {
-                lowest = l_val;
+            if l_val < lowest_val {
+                lowest_val = l_val;
                 lowest_idx = j;
             }
         }
 
-        let offset_highest = i - highest_idx; // bars since highest
-        let offset_lowest = i - lowest_idx;   // bars since lowest
+        let offset_highest = i - highest_idx;
+        let offset_lowest = i - lowest_idx;
 
         // Aroon Up = ((length - offset_highest)/length)*100
         // Aroon Down = ((length - offset_lowest)/length)*100
-        let up_val = ((length - offset_highest) as f64 / length as f64) * 100.0;
-        let down_val = ((length - offset_lowest) as f64 / length as f64) * 100.0;
-
-        aroon_up[i] = up_val;
-        aroon_down[i] = down_val;
+        // Use inv_length to avoid division each time
+        aroon_up[i] = (length as f64 - offset_highest as f64) * inv_length * 100.0;
+        aroon_down[i] = (length as f64 - offset_lowest as f64) * inv_length * 100.0;
     }
 
     Ok(AroonOutput {
@@ -121,9 +116,9 @@ mod tests {
         let input = AroonInput::with_default_params(&candles);
         let result = calculate_aroon(&input).expect("Failed to calculate Aroon");
 
-        // Given test values for the last 5:
-        // Aroon Up: 21.43%,14.29%, 7.14%, 0.00%, 0.00%
-        // Aroon Down: 71.43%, 64.29%, 57.14%, 50.00%, 42.86%
+        // Given test values:
+        // Aroon Up last 5: 21.43%,14.29%,7.14%,0.00%,0.00%
+        // Aroon Down last 5: 71.43%,64.29%,57.14%,50.00%,42.86%
         let expected_up_last_five = vec![21.43, 14.29, 7.14, 0.0, 0.0];
         let expected_down_last_five = vec![71.43,64.29,57.14,50.0,42.86];
 
@@ -153,8 +148,8 @@ mod tests {
             );
         }
 
-        // Check finite after enough data
         let length = input.get_length();
+        // Check values after length are finite if not NaN
         for val in result.aroon_up.iter().skip(length) {
             if !val.is_nan() {
                 assert!(val.is_finite(), "Aroon Up should be finite after enough data");

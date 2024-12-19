@@ -20,6 +20,7 @@ use my_project::indicators::{
     ao::{calculate_ao, AoInput},
     apo::{calculate_apo, ApoInput},
     aroon::{calculate_aroon, AroonInput},
+    aroonosc::{calculate_aroon_osc, AroonOscInput},
 };
 use std::time::Duration;
 
@@ -40,6 +41,12 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
+
+    // AROONOSC
+    group.bench_function(BenchmarkId::new("AROONOSC", 0), |b| {
+        let input = AroonOscInput::with_default_params(&candles);
+        b.iter(|| calculate_aroon_osc(black_box(&input)).expect("Failed to calculate AROONOSC"))
+    });
 
     // AROON
     group.bench_function(BenchmarkId::new("AROON", 0), |b| {
