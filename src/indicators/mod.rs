@@ -14,3 +14,6 @@ pub mod ao;
 pub mod apo;
 pub mod aroon;
 pub mod aroonosc;
+pub mod atr;
+pub mod avgprice;
+pub mod highpass;

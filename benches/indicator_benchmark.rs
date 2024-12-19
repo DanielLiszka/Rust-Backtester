@@ -21,6 +21,9 @@ use my_project::indicators::{
     apo::{calculate_apo, ApoInput},
     aroon::{calculate_aroon, AroonInput},
     aroonosc::{calculate_aroon_osc, AroonOscInput},
+    atr::{calculate_atr, AtrInput},
+    avgprice::{calculate_avgprice, AvgPriceInput},
+    highpass::{calculate_highpass, HighPassInput},
 };
 use std::time::Duration;
 
@@ -41,6 +44,24 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
+
+    // HIGHPASS
+    group.bench_function(BenchmarkId::new("HIGHPASS", 0), |b| {
+        let input = HighPassInput::with_default_params(&close_prices);
+        b.iter(|| calculate_highpass(black_box(&input)).expect("Failed to calculate HIGHPASS"))
+    });
+
+    // AVGPRICE
+    group.bench_function(BenchmarkId::new("AVGPRICE", 0), |b| {
+        let input = AvgPriceInput::with_default_params(&candles);
+        b.iter(|| calculate_avgprice(&input).expect("Failed to calculate AVGPRICE"))
+    });
+
+    // ATR  
+    group.bench_function(BenchmarkId::new("ATR", 0), |b| {
+        let input = AtrInput::with_default_params(&candles);
+        b.iter(|| calculate_atr(black_box(&input)).expect("Failed to calculate ATR"))
+    });
 
     // AROONOSC
     group.bench_function(BenchmarkId::new("AROONOSC", 0), |b| {
