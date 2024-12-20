@@ -24,6 +24,7 @@ use my_project::indicators::{
     atr::{calculate_atr, AtrInput},
     avgprice::{calculate_avgprice, AvgPriceInput},
     highpass::{calculate_highpass, HighPassInput},
+    bandpass::{calculate_bandpass, BandPassInput},
 };
 use std::time::Duration;
 
@@ -44,6 +45,12 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(10, 0));
     group.warm_up_time(Duration::new(5, 0));
+
+    // BANDPASS
+    group.bench_function(BenchmarkId::new("BANDPASS", 0), |b| {
+        let input = BandPassInput::with_default_params(&close_prices);
+        b.iter(|| calculate_bandpass(black_box(&input)).expect("Failed to calculate BANDPASS"))
+    });
 
     // HIGHPASS
     group.bench_function(BenchmarkId::new("HIGHPASS", 0), |b| {
