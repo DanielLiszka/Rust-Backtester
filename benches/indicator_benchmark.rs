@@ -26,6 +26,11 @@ use my_project::indicators::{
     highpass::{calculate_highpass, HighPassInput},
     bandpass::{calculate_bandpass, BandPassInput},
     wma::{calculate_wma, WmaInput},
+    dema::{calculate_dema, DemaInput},
+    tema::{calculate_tema, TemaInput},
+    trima::{calculate_trima, TrimaInput},
+    kama::{calculate_kama, KamaInput},
+    mama::{calculate_mama, MamaInput},
 };
 use std::time::Duration;
 
@@ -46,6 +51,36 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(5, 0));
     group.warm_up_time(Duration::new(2, 0));
+
+    // MAMA
+    group.bench_function(BenchmarkId::new("MAMA", 0), |b| {
+        let input = MamaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_mama(black_box(&input)).expect("Failed to calculate MAMA"))
+    });
+
+    // KAMA
+    group.bench_function(BenchmarkId::new("KAMA", 0), |b| {
+        let input = KamaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_kama(black_box(&input)).expect("Failed to calculate KAMA"))
+    });
+
+    // TRIMA
+    group.bench_function(BenchmarkId::new("TRIMA", 0), |b| {
+        let input = TrimaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_trima(black_box(&input)).expect("Failed to calculate TRIMA"))
+    });
+
+    // TEMA
+    group.bench_function(BenchmarkId::new("TEMA", 0), |b| {
+        let input = TemaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_tema(black_box(&input)).expect("Failed to calculate TEMA"))
+    });
+
+    // DEMA 
+    group.bench_function(BenchmarkId::new("DEMA", 0), |b| {
+        let input = DemaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_dema(black_box(&input)).expect("Failed to calculate DEMA"))
+    });
 
     // WMA
     group.bench_function(BenchmarkId::new("WMA", 0), |b| {
