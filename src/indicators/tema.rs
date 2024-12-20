@@ -7,7 +7,6 @@ pub struct TemaParams {
 
 impl Default for TemaParams {
     fn default() -> Self {
-        // Default to a 9-period TEMA if not specified
         TemaParams { period: Some(9) }
     }
 }
@@ -19,12 +18,10 @@ pub struct TemaInput<'a> {
 }
 
 impl<'a> TemaInput<'a> {
-    #[inline]
     pub fn new(data: &'a [f64], params: TemaParams) -> Self {
         TemaInput { data, params }
     }
 
-    #[inline]
     pub fn with_default_params(data: &'a [f64]) -> Self {
         TemaInput {
             data,
@@ -32,9 +29,8 @@ impl<'a> TemaInput<'a> {
         }
     }
 
-    #[inline]
     fn get_period(&self) -> usize {
-        self.params.period.unwrap_or_else(|| TemaParams::default().period.unwrap())
+        self.params.period.unwrap_or(9)
     }
 }
 
@@ -43,68 +39,110 @@ pub struct TemaOutput {
     pub values: Vec<f64>,
 }
 
-#[inline]
-fn compute_ema(
-    input_data: &[f64],
-    period: usize,
-    output: &mut Vec<f64>,
-) {
-    // Initialization: simple average of first `period` points
-    let sum: f64 = input_data[..period].iter().sum();
-    let initial = sum / period as f64;
-    output.push(initial);
-
-    let alpha = 2.0 / (period as f64 + 1.0);
-
-    // Compute EMA
-    let mut prev_ema = initial;
-    for &value in &input_data[period..] {
-        let new_ema = (value - prev_ema) * alpha + prev_ema;
-        output.push(new_ema);
-        prev_ema = new_ema;
-    }
-}
-
-#[inline]
 pub fn calculate_tema(input: &TemaInput) -> Result<TemaOutput, Box<dyn Error>> {
     let data = input.data;
+    let len = data.len();
     let period = input.get_period();
 
-    if period == 0 || period > data.len() {
+    if period == 0 || period > len {
         return Err("Invalid period specified for TEMA calculation.".into());
     }
 
-    // Length calculations:
-    // ema1_len = data.len() - (period - 1)
-    // ema2_len = ema1_len - (period - 1) = data.len() - 2*(period - 1)
-    // ema3_len = ema2_len - (period - 1) = data.len() - 3*(period - 1)
-    let ema1_len = data.len() - period + 1;
-    let ema2_len = ema1_len - period + 1;
-    let ema3_len = ema2_len - period + 1;
+    let lookback_ema = period - 1;
+    let lookback_total = 3 * lookback_ema;
 
-    // Pre-allocate vectors with exact capacity
-    let mut ema1 = Vec::with_capacity(ema1_len);
-    let mut ema2 = Vec::with_capacity(ema2_len);
-    let mut ema3 = Vec::with_capacity(ema3_len);
+    // Arrays for each EMA and final TEMA
+    let mut ema1 = vec![f64::NAN; len];
+    let mut ema2 = vec![f64::NAN; len];
+    let mut ema3 = vec![f64::NAN; len];
+    let mut tema_values = vec![f64::NAN; len];
 
-    // Compute EMA1 directly from data
-    compute_ema(data, period, &mut ema1);
+    // EMA alpha
+    let alpha = 2.0 / (period as f64 + 1.0);
 
-    // Compute EMA2 from EMA1
-    compute_ema(&ema1, period, &mut ema2);
+    // Initialize for first EMA
+    let mut sum_ema1 = 0.0;
+    let mut prev_ema1 = f64::NAN;
 
-    // Compute EMA3 from EMA2
-    compute_ema(&ema2, period, &mut ema3);
+    // For second EMA initialization
+    let mut sum_ema2 = 0.0;
+    let mut prev_ema2 = f64::NAN;
+    let mut ema2_init_done = false;
 
-    // Construct TEMA
-    // TEMA[i] = 3*ema1[i+2*(period-1)] - 3*ema2[i+(period-1)] + ema3[i]
-    let shift_ema1 = 2 * (period - 1);
-    let shift_ema2 = (period - 1);
+    // For third EMA initialization
+    let mut sum_ema3 = 0.0;
+    let mut prev_ema3 = f64::NAN;
+    let mut ema3_init_done = false;
 
-    let mut tema_values = Vec::with_capacity(ema3_len);
-    for i in 0..ema3_len {
-        let val = 3.0 * ema1[i + shift_ema1] - 3.0 * ema2[i + shift_ema2] + ema3[i];
-        tema_values.push(val);
+    for i in 0..len {
+        let price = data[i];
+
+        // Compute first EMA
+        if i < period {
+            sum_ema1 += price;
+            if i == period - 1 {
+                let sma = sum_ema1 / period as f64;
+                ema1[i] = sma;
+                prev_ema1 = sma;
+            }
+        } else {
+            let ema_val = (price - prev_ema1) * alpha + prev_ema1;
+            ema1[i] = ema_val;
+            prev_ema1 = ema_val;
+        }
+
+        // Once first EMA stable at i=period-1, start second EMA accumulation
+        if i >= (period - 1) && i < (period - 1) + period {
+            let val = ema1[i];
+            if val.is_finite() {
+                sum_ema2 += val;
+            }
+            if i == (period - 1) + (period - 1) {
+                // second EMA initial SMA
+                let sma2 = sum_ema2 / period as f64;
+                ema2[i] = sma2;
+                prev_ema2 = sma2;
+                ema2_init_done = true;
+            }
+        } else if i > (period - 1) + (period - 1) && ema2_init_done {
+            // second EMA
+            let val = ema1[i];
+            let ema_val = (val - prev_ema2) * alpha + prev_ema2;
+            ema2[i] = ema_val;
+            prev_ema2 = ema_val;
+        }
+
+        // Once second EMA stable at i=2*(period-1), start third EMA accumulation
+        if i >= 2 * (period - 1) && i < 2*(period - 1) + period {
+            let val = ema2[i];
+            if val.is_finite() {
+                sum_ema3 += val;
+            }
+            if i == 3*(period - 1) {
+                // third EMA initial SMA
+                let sma3 = sum_ema3 / period as f64;
+                ema3[i] = sma3;
+                prev_ema3 = sma3;
+                ema3_init_done = true;
+            }
+        } else if i > 3*(period - 1) && ema3_init_done {
+            // third EMA
+            let val = ema2[i];
+            let ema_val = (val - prev_ema3)*alpha + prev_ema3;
+            ema3[i] = ema_val;
+            prev_ema3 = ema_val;
+        }
+
+        // TEMA stable at i≥3*(period-1)
+        if i >= 3*(period - 1) && ema3_init_done {
+            let fe = ema1[i];
+            let se = ema2[i];
+            let te = ema3[i];
+            if fe.is_finite() && se.is_finite() && te.is_finite() {
+                let tema = 3.0 * fe - 3.0 * se + te;
+                tema_values[i] = tema;
+            }
+        }
     }
 
     Ok(TemaOutput {
@@ -137,11 +175,7 @@ mod tests {
             58934.24395798363,
         ];
 
-        assert!(
-            tema_result.values.len() >= 5,
-            "Not enough TEMA values for the test"
-        );
-
+        assert!(tema_result.values.len() >= 5);
         let start_index = tema_result.values.len() - 5;
         let result_last_five_tema = &tema_result.values[start_index..];
 

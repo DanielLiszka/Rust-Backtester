@@ -31,6 +31,7 @@ use my_project::indicators::{
     trima::{calculate_trima, TrimaInput},
     kama::{calculate_kama, KamaInput},
     mama::{calculate_mama, MamaInput},
+    T3::{calculate_t3, T3Input},
 };
 use std::time::Duration;
 
@@ -56,6 +57,12 @@ fn benchmark_indicators(c: &mut Criterion) {
     group.bench_function(BenchmarkId::new("MAMA", 0), |b| {
         let input = MamaInput::with_default_params(&close_prices);
         b.iter(|| calculate_mama(black_box(&input)).expect("Failed to calculate MAMA"))
+    });
+    
+    // T3
+    group.bench_function(BenchmarkId::new("T3", 0), |b| {
+        let input = T3Input::with_default_params(&close_prices);
+        b.iter(|| calculate_t3(black_box(&input)).expect("Failed to calculate T3"))
     });
 
     // KAMA

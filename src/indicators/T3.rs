@@ -50,97 +50,123 @@ pub struct T3Output {
 #[inline]
 pub fn calculate_t3(input: &T3Input) -> Result<T3Output, Box<dyn Error>> {
     let data = input.data;
-    let p = input.get_period();
-    let v = input.get_volume_factor();
-    if p == 0 || p > data.len() {
+    let opt_in_time_period = input.get_period();
+    let opt_in_v_factor = input.get_volume_factor();
+    let length = data.len();
+    if opt_in_time_period == 0 || opt_in_time_period > length {
         return Err("Invalid period specified.".into());
     }
+    let lookback_total = 6 * (opt_in_time_period - 1);
+    let mut out_values = vec![std::f64::NAN; length];
+    if lookback_total >= length {
+        return Ok(T3Output { values: out_values });
+    }
+    let start_idx = lookback_total;
+    let end_idx = length - 1;
+    let k = 2.0 / (opt_in_time_period as f64 + 1.0);
+    let one_minus_k = 1.0 - k;
+    let mut today = 0;
 
-    let c1 = -v * v * v;
-    let c2 = 3.0 * v * v + 3.0 * v * v * v;
-    let c3 = -6.0 * v * v - 3.0 * v - 3.0 * v * v * v;
-    let c4 = 1.0 + 3.0 * v + 3.0 * v * v + v * v * v;
+    let mut temp_real;
+    let mut e1;
+    let mut e2;
+    let mut e3;
+    let mut e4;
+    let mut e5;
+    let mut e6;
 
-    let mut e1 = Vec::with_capacity(data.len());
-    let mut e2 = Vec::with_capacity(data.len());
-    let mut e3 = Vec::with_capacity(data.len());
-    let mut e4 = Vec::with_capacity(data.len());
-    let mut e5 = Vec::with_capacity(data.len());
-    let mut e6 = Vec::with_capacity(data.len());
+    temp_real = 0.0;
+    for i in 0..opt_in_time_period {
+        temp_real += data[today + i];
+    }
+    e1 = temp_real / opt_in_time_period as f64;
+    today += opt_in_time_period;
 
-    let alpha = 2.0 / (p as f64 + 1.0);
+    temp_real = e1;
+    for _ in 1..opt_in_time_period {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        temp_real += e1;
+        today += 1;
+    }
+    e2 = temp_real / opt_in_time_period as f64;
 
-    {
-        let mut ema = data[0];
-        e1.push(ema);
-        for &val in &data[1..] {
-            ema = (val - ema) * alpha + ema;
-            e1.push(ema);
-        }
+    temp_real = e2;
+    for _ in 1..opt_in_time_period {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        temp_real += e2;
+        today += 1;
+    }
+    e3 = temp_real / opt_in_time_period as f64;
+
+    temp_real = e3;
+    for _ in 1..opt_in_time_period {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        e3 = (k * e2) + (one_minus_k * e3);
+        temp_real += e3;
+        today += 1;
+    }
+    e4 = temp_real / opt_in_time_period as f64;
+
+    temp_real = e4;
+    for _ in 1..opt_in_time_period {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        e3 = (k * e2) + (one_minus_k * e3);
+        e4 = (k * e3) + (one_minus_k * e4);
+        temp_real += e4;
+        today += 1;
+    }
+    e5 = temp_real / opt_in_time_period as f64;
+
+    temp_real = e5;
+    for _ in 1..opt_in_time_period {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        e3 = (k * e2) + (one_minus_k * e3);
+        e4 = (k * e3) + (one_minus_k * e4);
+        e5 = (k * e4) + (one_minus_k * e5);
+        temp_real += e5;
+        today += 1;
+    }
+    e6 = temp_real / opt_in_time_period as f64;
+
+    while today <= start_idx {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        e3 = (k * e2) + (one_minus_k * e3);
+        e4 = (k * e3) + (one_minus_k * e4);
+        e5 = (k * e4) + (one_minus_k * e5);
+        e6 = (k * e5) + (one_minus_k * e6);
+        today += 1;
     }
 
-    {
-        let mut ema = e1[0];
-        e2.push(ema);
-        for &val in &e1[1..] {
-            ema = (val - ema) * alpha + ema;
-            e2.push(ema);
-        }
+    let temp = opt_in_v_factor * opt_in_v_factor;
+    let c1 = -(temp * opt_in_v_factor);
+    let c2 = 3.0 * (temp - c1);
+    let c3 = -6.0 * temp - 3.0 * (opt_in_v_factor - c1);
+    let c4 = 1.0 + 3.0 * opt_in_v_factor - c1 + 3.0 * temp;
+
+    if start_idx < length {
+        out_values[start_idx] = c1 * e6 + c2 * e5 + c3 * e4 + c4 * e3;
     }
 
-    {
-        let mut ema = e2[0];
-        e3.push(ema);
-        for &val in &e2[1..] {
-            ema = (val - ema) * alpha + ema;
-            e3.push(ema);
-        }
-    }
-
-    {
-        let mut ema = e3[0];
-        e4.push(ema);
-        for &val in &e3[1..] {
-            ema = (val - ema) * alpha + ema;
-            e4.push(ema);
-        }
-    }
-
-    {
-        let mut ema = e4[0];
-        e5.push(ema);
-        for &val in &e4[1..] {
-            ema = (val - ema) * alpha + ema;
-            e5.push(ema);
-        }
-    }
-
-    {
-        let mut ema = e5[0];
-        e6.push(ema);
-        for &val in &e5[1..] {
-            ema = (val - ema) * alpha + ema;
-            e6.push(ema);
-        }
-    }
-
-    let len = data.len();
-    let mut t3_values = Vec::with_capacity(len);
-    for i in 0..len {
-        if i < (p * 5) {
-            t3_values.push(std::f64::NAN);
-        } else {
-            t3_values.push(
-                e6[i] * c1 +
-                e5[i] * c2 +
-                e4[i] * c3 +
-                e3[i] * c4
-            );
-        }
+    let mut out_idx = start_idx + 1;
+    while today <= end_idx {
+        e1 = (k * data[today]) + (one_minus_k * e1);
+        e2 = (k * e1) + (one_minus_k * e2);
+        e3 = (k * e2) + (one_minus_k * e3);
+        e4 = (k * e3) + (one_minus_k * e4);
+        e5 = (k * e4) + (one_minus_k * e5);
+        e6 = (k * e5) + (one_minus_k * e6);
+        out_values[out_idx] = c1 * e6 + c2 * e5 + c3 * e4 + c4 * e3;
+        out_idx += 1;
+        today += 1;
     }
 
     Ok(T3Output {
-        values: t3_values,
+        values: out_values,
     })
 }
 

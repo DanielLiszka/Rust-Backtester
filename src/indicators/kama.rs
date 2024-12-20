@@ -53,27 +53,60 @@ pub fn calculate_kama(input: &KamaInput) -> Result<KamaOutput, Box<dyn Error>> {
     if lookback >= len {
         return Ok(KamaOutput { values });
     }
-    let fastest = 2.0;
-    let slowest = 30.0;
-    let fast_alpha = 2.0/(fastest+1.0);
-    let slow_alpha = 2.0/(slowest+1.0);
-    let mut sum_change = 0.0;
-    for i in 1..period {
-        sum_change += (data[i]-data[i-1]).abs();
+    let const_max = 2.0/(30.0+1.0);
+    let const_diff = (2.0/(2.0+1.0)) - const_max;
+    let start_idx = lookback;
+    let mut sum_roc1=0.0;
+    let mut today=start_idx-lookback;
+    let mut i=period;
+    while i>0 {
+        i-=1;
+        let temp = data[today+1]-data[today];
+        sum_roc1+=temp.abs();
+        today+=1;
     }
-    let direction = (data[period-1]-data[0]).abs();
-    let er = if sum_change==0.0 {0.0} else {direction/sum_change};
-    let sc = (er*(fast_alpha - slow_alpha)+slow_alpha).powi(2);
-    values[period-1]=data[period-1];
-    let mut kama= data[period-1];
-    for i in period..len {
-        sum_change -= (data[i-period+1]-data[i-period]).abs();
-        sum_change += (data[i]-data[i-1]).abs();
-        let direction=(data[i]-data[i-(period-1)]).abs();
-        let er=if sum_change==0.0 {0.0} else {direction/sum_change};
-        let sc=(er*(fast_alpha - slow_alpha)+slow_alpha).powi(2);
-        kama = kama + sc*(data[i]-kama);
-        values[i]=kama;
+    let mut prev_kama=data[today];
+    values[today]=prev_kama;
+    let mut out_idx=1;
+    let mut trailing_idx=start_idx-lookback;
+    let mut trailing_value=data[trailing_idx];
+    today+=1;
+    while today<=start_idx {
+        let price=data[today];
+        let temp_real=(price-data[trailing_idx]).abs();
+        sum_roc1-= (data[trailing_idx+1]-trailing_value).abs();
+        sum_roc1+= (price-data[today-1]).abs();
+        trailing_value=data[trailing_idx+1];
+        trailing_idx+=1;
+        let direction=temp_real;
+        let er=if sum_roc1==0.0 {0.0} else {direction/sum_roc1};
+        let sc=(er*const_diff+const_max)*(er*const_diff+const_max);
+        prev_kama+=(price - prev_kama)*sc;
+        today+=1;
+    }
+    if today<=len {
+        values[0]=f64::NAN;
+        for i in 1..out_idx {
+            values[i]=f64::NAN;
+        }
+    }
+    values[0]=f64::NAN; 
+    let mut output_beg = today-1;
+    values[output_beg]=prev_kama;
+    out_idx=1;
+    while today<=len-1 {
+        let price=data[today];
+        sum_roc1-= (data[trailing_idx+1]-trailing_value).abs();
+        sum_roc1+= (price-data[today-1]).abs();
+        trailing_value=data[trailing_idx+1];
+        trailing_idx+=1;
+        let direction=(price-data[trailing_idx]).abs();
+        let er=if sum_roc1==0.0 {0.0} else {direction/sum_roc1};
+        let sc=(er*const_diff+const_max)*(er*const_diff+const_max);
+        prev_kama+=(price - prev_kama)*sc;
+        values[output_beg+out_idx]=prev_kama;
+        out_idx+=1;
+        today+=1;
     }
     Ok(KamaOutput { values })
 }
