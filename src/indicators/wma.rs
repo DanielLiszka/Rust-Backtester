@@ -43,29 +43,25 @@ pub struct WmaOutput {
 
 pub fn calculate_wma(input: &WmaInput) -> Result<WmaOutput, Box<dyn Error>> {
     let data = input.data;
-    let period = input.get_period();
     let len = data.len();
-
+    let period = input.get_period();
+    let mut values = vec![f64::NAN; len];
     if period == 0 {
         return Err("Period cannot be zero for WMA calculation.".into());
     }
-
-    let mut values = vec![f64::NAN; len];
     if period > len {
         return Ok(WmaOutput { values });
     }
-
     if period == 1 {
         values.copy_from_slice(data);
         return Ok(WmaOutput { values });
     }
 
+    let lookback_total = period - 1;
+    let start_idx = lookback_total;
     let sum_of_weights = (period * (period + 1)) >> 1;
     let divider = sum_of_weights as f64;
     let period_f = period as f64;
-
-    let lookback_total = period - 1;
-    let start_idx = lookback_total;
 
     let mut period_sub = 0.0;
     let mut period_sum = 0.0;

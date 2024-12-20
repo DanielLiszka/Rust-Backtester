@@ -31,7 +31,9 @@ use my_project::indicators::{
     trima::{calculate_trima, TrimaInput},
     kama::{calculate_kama, KamaInput},
     mama::{calculate_mama, MamaInput},
-    T3::{calculate_t3, T3Input},
+    t3::{calculate_t3, T3Input},
+    fwma::{calculate_fwma, FwmaInput},
+    hma::{calculate_hma, HmaInput},
 };
 use std::time::Duration;
 
@@ -52,6 +54,18 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(5, 0));
     group.warm_up_time(Duration::new(2, 0));
+
+    // HMA
+    group.bench_function(BenchmarkId::new("HMA", 0), |b| {
+        let input = HmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_hma(black_box(&input)).expect("Failed to calculate HMA"))
+    });
+
+    // FWMA
+    group.bench_function(BenchmarkId::new("FWMA", 0), |b| {
+        let input = FwmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_fwma(black_box(&input)).expect("Failed to calculate FWMA"))
+    });
 
     // MAMA
     group.bench_function(BenchmarkId::new("MAMA", 0), |b| {

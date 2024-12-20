@@ -24,4 +24,6 @@ pub mod tema;
 pub mod trima;
 pub mod kama;
 pub mod mama;
-pub mod T3;
+pub mod t3;
+pub mod fwma;
+pub mod hma;
