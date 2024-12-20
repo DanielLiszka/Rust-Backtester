@@ -75,6 +75,9 @@ pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>
 
         // Inline loop for scanning the window
         // Minimal branching and no iterator overhead
+        
+
+
         for j in (start+1)..=i {
             let h_val = high[j];
             if h_val > highest_val {
