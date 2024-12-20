@@ -25,6 +25,7 @@ use my_project::indicators::{
     avgprice::{calculate_avgprice, AvgPriceInput},
     highpass::{calculate_highpass, HighPassInput},
     bandpass::{calculate_bandpass, BandPassInput},
+    wma::{calculate_wma, WmaInput},
 };
 use std::time::Duration;
 
@@ -43,8 +44,14 @@ fn benchmark_indicators(c: &mut Criterion) {
         .expect("Failed to extract hl2 prices");
 
     let mut group = c.benchmark_group("Indicator Benchmarks");
-    group.measurement_time(Duration::new(10, 0));
-    group.warm_up_time(Duration::new(5, 0));
+    group.measurement_time(Duration::new(5, 0));
+    group.warm_up_time(Duration::new(2, 0));
+
+    // WMA
+    group.bench_function(BenchmarkId::new("WMA", 0), |b| {
+        let input = WmaInput::with_default_params(&close_prices);
+        b.iter(|| calculate_wma(black_box(&input)).expect("Failed to calculate WMA"))
+    });
 
     // BANDPASS
     group.bench_function(BenchmarkId::new("BANDPASS", 0), |b| {

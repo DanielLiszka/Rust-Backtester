@@ -18,4 +18,4 @@ pub mod atr;
 pub mod avgprice;
 pub mod highpass;
 pub mod bandpass;
-pub mod beta;
+pub mod wma;
