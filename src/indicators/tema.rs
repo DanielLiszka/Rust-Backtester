@@ -7,7 +7,7 @@ pub struct TemaParams {
 
 impl Default for TemaParams {
     fn default() -> Self {
-        TemaParams { period: Some(9) }
+        Self { period: Some(9) }
     }
 }
 
@@ -39,109 +39,57 @@ pub struct TemaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_tema(input: &TemaInput) -> Result<TemaOutput, Box<dyn Error>> {
     let data = input.data;
-    let len = data.len();
+    let n = data.len();
     let period = input.get_period();
 
-    if period == 0 || period > len {
-        return Err("Invalid period specified for TEMA calculation.".into());
+    if period < 1 {
+        return Err("Period cannot be zero or negative for TEMA.".into());
     }
 
-    let lookback_ema = period - 1;
-    let lookback_total = 3 * lookback_ema;
+    if period > n {
+        return Err("Not enough data points to calculate TEMA.".into());
+    }
+    
+    let lookback = (period - 1) * 3;
+    if n == 0 || n <= lookback {
+        return Ok(TemaOutput {
+            values: vec![f64::NAN; n],
+        });
+    }
 
-    // Arrays for each EMA and final TEMA
-    let mut ema1 = vec![f64::NAN; len];
-    let mut ema2 = vec![f64::NAN; len];
-    let mut ema3 = vec![f64::NAN; len];
-    let mut tema_values = vec![f64::NAN; len];
+    let per = 2.0 / (period as f64 + 1.0);
+    let per1 = 1.0 - per;
 
-    // EMA alpha
-    let alpha = 2.0 / (period as f64 + 1.0);
+    let mut ema1 = data[0];
+    let mut ema2 = 0.0;
+    let mut ema3 = 0.0;
 
-    // Initialize for first EMA
-    let mut sum_ema1 = 0.0;
-    let mut prev_ema1 = f64::NAN;
+    let mut tema_values = vec![f64::NAN; n];
 
-    // For second EMA initialization
-    let mut sum_ema2 = 0.0;
-    let mut prev_ema2 = f64::NAN;
-    let mut ema2_init_done = false;
-
-    // For third EMA initialization
-    let mut sum_ema3 = 0.0;
-    let mut prev_ema3 = f64::NAN;
-    let mut ema3_init_done = false;
-
-    for i in 0..len {
+    for i in 0..n {
         let price = data[i];
 
-        // Compute first EMA
-        if i < period {
-            sum_ema1 += price;
-            if i == period - 1 {
-                let sma = sum_ema1 / period as f64;
-                ema1[i] = sma;
-                prev_ema1 = sma;
-            }
-        } else {
-            let ema_val = (price - prev_ema1) * alpha + prev_ema1;
-            ema1[i] = ema_val;
-            prev_ema1 = ema_val;
+        ema1 = ema1 * per1 + price * per;
+
+        if i == (period - 1) {
+            ema2 = ema1;
+        }
+        if i >= (period - 1) {
+            ema2 = ema2 * per1 + ema1 * per;
         }
 
-        // Once first EMA stable at i=period-1, start second EMA accumulation
-        if i >= (period - 1) && i < (period - 1) + period {
-            let val = ema1[i];
-            if val.is_finite() {
-                sum_ema2 += val;
-            }
-            if i == (period - 1) + (period - 1) {
-                // second EMA initial SMA
-                let sma2 = sum_ema2 / period as f64;
-                ema2[i] = sma2;
-                prev_ema2 = sma2;
-                ema2_init_done = true;
-            }
-        } else if i > (period - 1) + (period - 1) && ema2_init_done {
-            // second EMA
-            let val = ema1[i];
-            let ema_val = (val - prev_ema2) * alpha + prev_ema2;
-            ema2[i] = ema_val;
-            prev_ema2 = ema_val;
+        if i == 2 * (period - 1) {
+            ema3 = ema2;
+        }
+        if i >= 2 * (period - 1) {
+            ema3 = ema3 * per1 + ema2 * per;
         }
 
-        // Once second EMA stable at i=2*(period-1), start third EMA accumulation
-        if i >= 2 * (period - 1) && i < 2*(period - 1) + period {
-            let val = ema2[i];
-            if val.is_finite() {
-                sum_ema3 += val;
-            }
-            if i == 3*(period - 1) {
-                // third EMA initial SMA
-                let sma3 = sum_ema3 / period as f64;
-                ema3[i] = sma3;
-                prev_ema3 = sma3;
-                ema3_init_done = true;
-            }
-        } else if i > 3*(period - 1) && ema3_init_done {
-            // third EMA
-            let val = ema2[i];
-            let ema_val = (val - prev_ema3)*alpha + prev_ema3;
-            ema3[i] = ema_val;
-            prev_ema3 = ema_val;
-        }
-
-        // TEMA stable at i≥3*(period-1)
-        if i >= 3*(period - 1) && ema3_init_done {
-            let fe = ema1[i];
-            let se = ema2[i];
-            let te = ema3[i];
-            if fe.is_finite() && se.is_finite() && te.is_finite() {
-                let tema = 3.0 * fe - 3.0 * se + te;
-                tema_values[i] = tema;
-            }
+        if i >= lookback {
+            tema_values[i] = 3.0 * ema1 - 3.0 * ema2 + ema3;
         }
     }
 

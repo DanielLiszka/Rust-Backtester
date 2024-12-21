@@ -47,70 +47,89 @@ pub struct TrimaOutput {
 #[inline]
 pub fn calculate_trima(input: &TrimaInput) -> Result<TrimaOutput, Box<dyn Error>> {
     let data = input.data;
-    let p = input.get_period();
+    let period = input.get_period();
+    let n = data.len();
 
-    if p == 0 || p > data.len() {
-        return Err("Invalid period specified for TRIMA calculation.".into());
+    if period > n {
+        return Err("Not enough data points to calculate TRIMA.".into());
     }
 
-    let (m1, m2) = if p % 2 == 0 {
-        (p / 2, (p / 2) + 1)
+    if period <= 3 {
+        return Err("TRIMA period must be greater than 3.".into());
+    }
+
+    let mut out = Vec::with_capacity(n);
+
+    let sum_of_weights = if period % 2 == 1 {
+        let half = period / 2 + 1;
+        (half * half) as f64
     } else {
-        let half = (p + 1) / 2;
-        (half, half)
+        let half_up = period / 2 + 1;
+        let half_down = period / 2;
+        (half_up * half_down) as f64
     };
+    let inv_weights = 1.0 / sum_of_weights;
 
-    let len_first_sma = data.len().saturating_sub(m1) + 1;
-    if len_first_sma == 0 {
-        return Err("Not enough data for first SMA".into());
+    let lead_period = if period % 2 == 1 { period / 2 } else { (period / 2) - 1 };
+    let trail_period = lead_period + 1;
+
+    let mut weight_sum = 0.0;
+    let mut lead_sum = 0.0;
+    let mut trail_sum = 0.0;
+    let mut w = 1;
+
+    for i in 0..(period - 1) {
+        let val = data[i];
+        weight_sum += val * (w as f64);
+
+        if i + 1 > period - lead_period {
+            lead_sum += val;
+        }
+        if i + 1 <= trail_period {
+            trail_sum += val;
+        }
+
+        if i + 1 < trail_period {
+            w += 1;
+        }
+        if i + 1 >= (period - lead_period) {
+            w -= 1;
+        }
     }
 
-    let len_final = len_first_sma.saturating_sub(m2) + 1;
-    if len_final == 0 {
-        return Err("Not enough data for second SMA".into());
+    let mut lsi  = (period - 1) as isize - lead_period as isize + 1;
+    let mut tsi1 = (period - 1) as isize - period as isize + 1 + trail_period as isize;
+    let mut tsi2 = (period - 1) as isize - period as isize + 1;
+
+    for i in (period - 1)..n {
+        let val = data[i];
+
+        weight_sum += val;
+
+        out.push(weight_sum * inv_weights);
+
+        lead_sum += val;
+
+        weight_sum += lead_sum;
+        weight_sum -= trail_sum;
+
+        lead_sum -= data[lsi as usize];
+        trail_sum += data[tsi1 as usize];
+        trail_sum -= data[tsi2 as usize];
+
+        lsi += 1;
+        tsi1 += 1;
+        tsi2 += 1;
     }
 
-    // Compute the first SMA inline
-    let mut first_sma = Vec::with_capacity(len_first_sma);
-    let inv_m1 = 1.0 / (m1 as f64);
-
-    // Initial sum for first SMA
-    let mut sum = 0.0;
-    for &val in &data[..m1] {
-        sum += val;
-    }
-    first_sma.push(sum * inv_m1);
-
-    // Rolling calculation of first SMA
-    for i in m1..data.len() {
-        sum += data[i] - data[i - m1];
-        first_sma.push(sum * inv_m1);
-    }
-
-    // Compute second SMA inline from first_sma
-    let inv_m2 = 1.0 / (m2 as f64);
-    let mut second_sum = 0.0;
-    for &val in &first_sma[..m2] {
-        second_sum += val;
-    }
-
-    let mut trima_values = Vec::with_capacity(len_final);
-    trima_values.push(second_sum * inv_m2);
-
-    for i in m2..first_sma.len() {
-        second_sum += first_sma[i] - first_sma[i - m2];
-        trima_values.push(second_sum * inv_m2);
-    }
-
-    Ok(TrimaOutput {
-        values: trima_values,
-    })
+    Ok(TrimaOutput { values: out })
 }
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_trima_accuracy() {

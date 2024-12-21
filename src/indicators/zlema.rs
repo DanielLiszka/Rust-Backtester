@@ -1,8 +1,3 @@
-use std::error::Error;
-use crate::indicators::ema::{calculate_ema, EmaInput, EmaParams};
-
-use super::ad;
-
 #[derive(Debug, Clone)]
 pub struct ZlemaParams {
     pub period: Option<usize>,
@@ -10,7 +5,6 @@ pub struct ZlemaParams {
 
 impl Default for ZlemaParams {
     fn default() -> Self {
-        // Common default for ZLEMA is often 14
         ZlemaParams { period: Some(14) }
     }
 }
@@ -58,16 +52,13 @@ pub fn calculate_zlema(input: &ZlemaInput) -> Result<ZlemaOutput, Box<dyn std::e
 
     let mut zlema_values = Vec::with_capacity(len);
 
-    // Initialize last_ema from the very first value
     let mut last_ema = data[0];
     zlema_values.push(last_ema);
 
     for i in 1..len {
         let val = if i < lag {
-            // Not enough data for lag adjustment, use raw data
             data[i]
         } else {
-            // Adjusted value: 2 * current - value lag candles ago
             2.0 * data[i] - data[i - lag]
         };
 
@@ -81,7 +72,7 @@ pub fn calculate_zlema(input: &ZlemaInput) -> Result<ZlemaOutput, Box<dyn std::e
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_zlema_accuracy() {
@@ -111,8 +102,6 @@ mod tests {
             );
         }
 
-        // Without a known reference, we just check that we got values back
-        // and that none are NaN.
         for val in result.values.iter() {
             assert!(val.is_finite(), "ZLEMA output should be finite");
         }

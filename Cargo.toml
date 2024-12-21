@@ -28,4 +28,8 @@ path = "src/main.rs"
 
 [profile.release]
 opt-level = 3      # Maximum optimization level
-lto = false         # Enable link-time optimization
+lto = false        # Enable link-time optimization
+codegen-units = 1
+
+[build]
+rustflags = ["-C", "target-cpu=native","-Z", "threads=16"]

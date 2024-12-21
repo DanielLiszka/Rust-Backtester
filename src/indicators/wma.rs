@@ -46,65 +46,35 @@ pub fn calculate_wma(input: &WmaInput) -> Result<WmaOutput, Box<dyn Error>> {
     let len = data.len();
     let period = input.get_period();
     let mut values = vec![f64::NAN; len];
-    if period == 0 {
-        return Err("Period cannot be zero for WMA calculation.".into());
-    }
     if period > len {
-        return Ok(WmaOutput { values });
+        return Err("period is greater than data length".into());
     }
-    if period == 1 {
-        values.copy_from_slice(data);
-        return Ok(WmaOutput { values });
+    if period <= 1 {
+        return Err("Invalid period for WMA calculation".into());
     }
 
-    let lookback_total = period - 1;
-    let start_idx = lookback_total;
+    let lookback = period - 1;
     let sum_of_weights = (period * (period + 1)) >> 1;
     let divider = sum_of_weights as f64;
-    let period_f = period as f64;
 
-    let mut period_sub = 0.0;
-    let mut period_sum = 0.0;
-    let mut in_idx = 0;
-    let mut i = 1;
+    let mut weighted_sum = 0.0;
+    let mut plain_sum = 0.0;
 
-    while in_idx < start_idx {
-        let val = data[in_idx];
-        period_sub += val;
-        period_sum += val * (i as f64);
-        in_idx += 1;
-        i += 1;
+    for i in 0..lookback {
+        let val = data[i];
+        weighted_sum += (i as f64 + 1.0) * val;
+        plain_sum += val;
     }
 
-    let mut trailing_idx = 0;
-    {
-        let val = data[in_idx];
-        in_idx += 1;
-        period_sub += val;
-        period_sum += val * period_f;
-        let trailing_val = data[trailing_idx];
-        trailing_idx += 1;
-        values[start_idx] = period_sum / divider;
-        period_sum -= period_sub;
-        let mut trailing_value = trailing_val;
-
-        while in_idx < len {
-            let new_val = data[in_idx];
-            in_idx += 1;
-
-            period_sub += new_val;
-            period_sub -= trailing_value;
-
-            period_sum += new_val * period_f;
-
-            trailing_value = data[trailing_idx];
-            trailing_idx += 1;
-
-            values[in_idx - 1] = period_sum / divider;
-            period_sum -= period_sub;
-        }
+    for i in lookback..len {
+        let val = data[i];
+        weighted_sum += (period as f64) * val;
+        plain_sum += val;
+        values[i] = weighted_sum / divider;
+        weighted_sum -= plain_sum;
+        let old_val = data[i - lookback];
+        plain_sum -= old_val;
     }
-
     Ok(WmaOutput { values })
 }
 

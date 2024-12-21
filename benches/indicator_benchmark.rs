@@ -52,8 +52,8 @@ fn benchmark_indicators(c: &mut Criterion) {
         .expect("Failed to extract hl2 prices");
 
     let mut group = c.benchmark_group("Indicator Benchmarks");
-    group.measurement_time(Duration::new(5, 0));
-    group.warm_up_time(Duration::new(2, 0));
+    group.measurement_time(Duration::new(8, 0));
+    group.warm_up_time(Duration::new(4, 0));
 
     // HMA
     group.bench_function(BenchmarkId::new("HMA", 0), |b| {
