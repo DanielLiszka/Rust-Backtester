@@ -1,6 +1,5 @@
 use std::error::Error;
 
-// Parameter struct for RSI
 #[derive(Debug, Clone)]
 pub struct RsiParams {
     pub period: Option<usize>,
@@ -8,7 +7,6 @@ pub struct RsiParams {
 
 impl Default for RsiParams {
     fn default() -> Self {
-        // Default period for RSI is commonly 14
         RsiParams { period: Some(14) }
     }
 }
@@ -31,7 +29,6 @@ impl<'a> RsiInput<'a> {
         }
     }
 
-    // Retrieve period, falling back to default if not specified
     fn get_period(&self) -> usize {
         self.params
             .period
@@ -106,7 +103,7 @@ pub fn calculate_rsi(input: &RsiInput) -> Result<RsiOutput, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_rsi_accuracy() {
@@ -138,7 +135,6 @@ mod tests {
             );
         }
 
-        // Test with default parameters (no period specified)
         let default_input = RsiInput::with_default_params(&close_prices);
         let default_rsi_result = calculate_rsi(&default_input).expect("Failed to calculate RSI with defaults");
         assert!(!default_rsi_result.values.is_empty(), "Should produce RSI values with default params");

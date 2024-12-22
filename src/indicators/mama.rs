@@ -9,7 +9,7 @@ pub struct MamaParams {
 
 impl Default for MamaParams {
     fn default() -> Self {
-        MamaParams {
+        Self {
             fast_limit: 0.5,
             slow_limit: 0.05,
         }
@@ -25,12 +25,12 @@ pub struct MamaInput<'a> {
 impl<'a> MamaInput<'a> {
     #[inline]
     pub fn new(data: &'a [f64], params: MamaParams) -> Self {
-        MamaInput { data, params }
+        Self { data, params }
     }
 
     #[inline]
     pub fn with_default_params(data: &'a [f64]) -> Self {
-        MamaInput {
+        Self {
             data,
             params: MamaParams::default(),
         }
@@ -44,33 +44,41 @@ pub struct MamaOutput {
 }
 
 #[inline(always)]
-fn nz(val: f64, fallback: f64) -> f64 {
-    val
-}
-
-#[inline(always)]
 fn hilbert(x0: f64, x2: f64, x4: f64, x6: f64) -> f64 {
-    0.0962*x0 + 0.5769*x2 - 0.5769*x4 -0.0962*x6
+    0.0962 * x0 + 0.5769 * x2 - 0.5769 * x4 - 0.0962 * x6
 }
 
-
+#[inline]
 pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
     let src = input.data;
-    let fast_limit = input.params.fast_limit;
-    let slow_limit = input.params.slow_limit;
     let len = src.len();
     if len < 10 {
         return Err("Not enough data".into());
     }
 
+    let fast_limit = input.params.fast_limit;
+    let slow_limit = input.params.slow_limit;
+
     let mut mama_values = vec![0.0; len];
     let mut fama_values = vec![0.0; len];
 
+    let mut smooth_buf = [0.0; 7];
+    let mut detrender_buf = [0.0; 7];
+    let mut i1_buf = [0.0; 7];
+    let mut q1_buf = [0.0; 7];
 
-    let mut smooth_buf = [src[0]; 7];
-    let mut detrender_buf = [src[0]; 7];
-    let mut i1_buf = [src[0]; 7];
-    let mut q1_buf = [src[0]; 7];
+    for b in &mut smooth_buf {
+        *b = src[0];
+    }
+    for b in &mut detrender_buf {
+        *b = src[0];
+    }
+    for b in &mut i1_buf {
+        *b = src[0];
+    }
+    for b in &mut q1_buf {
+        *b = src[0];
+    }
 
     let mut prev_mesa_period = 0.0;
     let mut prev_mama = src[0];
@@ -82,78 +90,113 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
     let mut prev_phase = 0.0;
 
     for i in 0..len {
-        let src_i  = src[i];
-        let src_i1 = if i>=1 {src[i-1]} else {src_i};
-        let src_i2 = if i>=2 {src[i-2]} else {src_i};
-        let src_i3 = if i>=3 {src[i-3]} else {src_i};
+        let src_i = src[i];
+        let s1 = if i >= 1 { src[i - 1] } else { src_i };
+        let s2 = if i >= 2 { src[i - 2] } else { src_i };
+        let s3 = if i >= 3 { src[i - 3] } else { src_i };
 
-        let smooth_val = (4.0*src_i + 3.0*src_i1 + 2.0*src_i2 + src_i3)/10.0;
-        // rotate smooth_buf
-        smooth_buf.copy_within(0..6,1);
-        smooth_buf[0] = smooth_val;
+        let smooth_val = (4.0 * src_i + 3.0 * s1 + 2.0 * s2 + s3) / 10.0;
 
-        let mesa_period_mult = 0.075*prev_mesa_period + 0.54;
+        let idx = i % 7;
+        smooth_buf[idx] = smooth_val;
 
-        let dt = hilbert(smooth_buf[0], smooth_buf[2], smooth_buf[4], smooth_buf[6])*mesa_period_mult;
-        detrender_buf.copy_within(0..6,1);
-        detrender_buf[0] = dt;
+        let x0 = smooth_buf[idx];
+        let x2 = smooth_buf[(idx + 7 - 2) % 7];
+        let x4 = smooth_buf[(idx + 7 - 4) % 7];
+        let x6 = smooth_buf[(idx + 7 - 6) % 7];
 
-        let i1_val = if i>=3 { detrender_buf[3]} else { dt };
-        i1_buf.copy_within(0..6,1);
-        i1_buf[0] = i1_val;
+        let mesa_period_mult = 0.075 * prev_mesa_period + 0.54;
+        let dt_val = hilbert(x0, x2, x4, x6) * mesa_period_mult;
 
-        let q1_val = hilbert(detrender_buf[0], detrender_buf[2], detrender_buf[4], detrender_buf[6])*mesa_period_mult;
-        q1_buf.copy_within(0..6,1);
-        q1_buf[0] = q1_val;
+        detrender_buf[idx] = dt_val;
+        let d0 = detrender_buf[idx];
+        let d2 = detrender_buf[(idx + 7 - 2) % 7];
+        let d4 = detrender_buf[(idx + 7 - 4) % 7];
+        let d6 = detrender_buf[(idx + 7 - 6) % 7];
 
-        let jI = hilbert(i1_buf[0], i1_buf[2], i1_buf[4], i1_buf[6])*mesa_period_mult;
-        let jQ = hilbert(q1_buf[0], q1_buf[2], q1_buf[4], q1_buf[6])*mesa_period_mult;
+        let i1_val = if i >= 3 {
+            detrender_buf[(idx + 7 - 3) % 7]
+        } else {
+            d0
+        };
+
+        i1_buf[idx] = i1_val;
+
+        let q1_val = hilbert(d0, d2, d4, d6) * mesa_period_mult;
+        q1_buf[idx] = q1_val;
+
+        let i1_0 = i1_buf[idx];
+        let i1_2 = i1_buf[(idx + 7 - 2) % 7];
+        let i1_4 = i1_buf[(idx + 7 - 4) % 7];
+        let i1_6 = i1_buf[(idx + 7 - 6) % 7];
+        let jI = hilbert(i1_0, i1_2, i1_4, i1_6) * mesa_period_mult;
+
+        let q1_0 = q1_buf[idx];
+        let q1_2 = q1_buf[(idx + 7 - 2) % 7];
+        let q1_4 = q1_buf[(idx + 7 - 4) % 7];
+        let q1_6 = q1_buf[(idx + 7 - 6) % 7];
+        let jQ = hilbert(q1_0, q1_2, q1_4, q1_6) * mesa_period_mult;
 
         let i2 = i1_val - jQ;
         let q2 = q1_val + jI;
 
-        let i2_sm = 0.2*i2 + 0.8*if i>0 {prev_i2_sm} else {i2};
-        let q2_sm = 0.2*q2 + 0.8*if i>0 {prev_q2_sm} else {q2};
+        let i2_sm = 0.2 * i2 + 0.8 * prev_i2_sm;
+        let q2_sm = 0.2 * q2 + 0.8 * prev_q2_sm;
 
-        let re = 0.2*(i2_sm*if i>0 {prev_i2_sm} else {i2_sm} + q2_sm*if i>0 {prev_q2_sm} else {q2_sm})
-                 + 0.8*if i>0 {prev_re} else {0.0};
-        let im = 0.2*(i2_sm*if i>0 {prev_q2_sm} else {q2_sm} - q2_sm*if i>0 {prev_i2_sm} else {i2_sm})
-                 + 0.8*if i>0 {prev_im} else {0.0};
+        let re = 0.2 * (i2_sm * prev_i2_sm + q2_sm * prev_q2_sm) + 0.8 * prev_re;
+        let im = 0.2 * (i2_sm * prev_q2_sm - q2_sm * prev_i2_sm) + 0.8 * prev_im;
 
         prev_i2_sm = i2_sm;
         prev_q2_sm = q2_sm;
         prev_re = re;
         prev_im = im;
 
-        let mut cur_mesa = if re!=0.0 && im!=0.0 {
-            2.0*PI/(im/re).atan()
+        let mut cur_mesa = if re != 0.0 && im != 0.0 {
+            2.0 * PI / (im / re).atan()
         } else {
             0.0
         };
 
-        let mp_1 = if i>0 {prev_mesa_period} else {cur_mesa};
-        cur_mesa = cur_mesa.min(1.5*mp_1);
-        cur_mesa = cur_mesa.max(0.67*mp_1);
-        cur_mesa = cur_mesa.max(6.0).min(50.0);
-        let cur_mesa_smooth = 0.2*cur_mesa + 0.8*mp_1;
+        let pm = if i > 0 { prev_mesa_period } else { cur_mesa };
+        if cur_mesa > 1.5 * pm {
+            cur_mesa = 1.5 * pm;
+        }
+        if cur_mesa < 0.67 * pm {
+            cur_mesa = 0.67 * pm;
+        }
+        if cur_mesa < 6.0 {
+            cur_mesa = 6.0;
+        } else if cur_mesa > 50.0 {
+            cur_mesa = 50.0;
+        }
+
+        let cur_mesa_smooth = 0.2 * cur_mesa + 0.8 * pm;
         prev_mesa_period = cur_mesa_smooth;
 
         let mut cur_phase = 0.0;
-        if i1_val !=0.0 {
-            cur_phase = (180.0/PI)*(q1_val/i1_val).atan();
+        if i1_val != 0.0 {
+            cur_phase = (180.0 / PI) * (q1_val / i1_val).atan();
         }
 
-        let mut dp = if i>0 {prev_phase - cur_phase} else {1.0};
-        if dp<1.0 {
-            dp=1.0;
+        let old_phase = prev_phase;
+        let mut dp = old_phase - cur_phase;
+        if dp < 1.0 {
+            dp = 1.0;
         }
         prev_phase = cur_phase;
 
-        let mut alpha = (fast_limit/dp).max(slow_limit);
+        let alpha = {
+            let a = fast_limit / dp;
+            if a < slow_limit {
+                slow_limit
+            } else {
+                a
+            }
+        };
 
-        let cur_mama = alpha*src_i + (1.0 - alpha)*if i>0 {prev_mama} else {src_i};
-        let a2 = alpha*0.5;
-        let cur_fama = a2*cur_mama+(1.0 - a2)*if i>0 {prev_fama} else {cur_mama};
+        let cur_mama = alpha * src_i + (1.0 - alpha) * prev_mama;
+        let a2 = 0.5 * alpha;
+        let cur_fama = a2 * cur_mama + (1.0 - a2) * prev_fama;
 
         prev_mama = cur_mama;
         prev_fama = cur_fama;
@@ -167,6 +210,7 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
         fama_values,
     })
 }
+
 
 #[cfg(test)]
 mod tests {

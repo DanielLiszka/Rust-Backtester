@@ -7,7 +7,6 @@ pub struct SmaParams {
 
 impl Default for SmaParams {
     fn default() -> Self {
-        // Default to a 14-period SMA if not specified
         SmaParams { period: Some(9) }
     }
 }
@@ -23,7 +22,6 @@ impl<'a> SmaInput<'a> {
         SmaInput { data, params }
     }
 
-    // Convenience constructor that uses default params if none provided
     pub fn with_default_params(data: &'a [f64]) -> Self {
         SmaInput {
             data,
@@ -31,8 +29,6 @@ impl<'a> SmaInput<'a> {
         }
     }
 
-    // Resolve the parameters. If the user didn't specify a period,
-    // fallback to the default in `SmaParams::default()`.
     fn get_period(&self) -> usize {
         self.params.period.unwrap_or_else(|| SmaParams::default().period.unwrap())
     }
@@ -70,7 +66,7 @@ pub fn calculate_sma(input: &SmaInput) -> Result<SmaOutput, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_sma_accuracy() {
@@ -80,12 +76,10 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        // Example: user provides explicit params
         let params = SmaParams { period: Some(9) };
         let input = SmaInput::new(&close_prices, params);
         let sma_result = calculate_sma(&input).expect("Failed to calculate SMA");
 
-        // Expected SMA values (update these to match your actual data)
         let expected_last_five_sma = vec![59180.8, 59175.0, 59129.4, 59085.4, 59133.7];
 
         assert!(
@@ -107,7 +101,6 @@ mod tests {
             );
         }
 
-        // Example: user provides no params (defaults to 14)
         let default_input = SmaInput::with_default_params(&close_prices);
         let default_sma_result = calculate_sma(&default_input).expect("Failed to calculate SMA with defaults");
         assert!(!default_sma_result.values.is_empty(), "Should produce some SMA values with default params");
