@@ -1,5 +1,6 @@
 use std::error::Error;
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+use std::f64::consts::PI;
+use crate::utilities::math_functions::{atan64, atan_raw64};
 
 #[derive(Debug, Clone)]
 pub struct MamaParams {
@@ -129,16 +130,16 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
         let i1_2 = i1_buf[(idx + 7 - 2) % 7];
         let i1_4 = i1_buf[(idx + 7 - 4) % 7];
         let i1_6 = i1_buf[(idx + 7 - 6) % 7];
-        let jI = hilbert(i1_0, i1_2, i1_4, i1_6) * mesa_period_mult;
+        let j_i = hilbert(i1_0, i1_2, i1_4, i1_6) * mesa_period_mult;
 
         let q1_0 = q1_buf[idx];
         let q1_2 = q1_buf[(idx + 7 - 2) % 7];
         let q1_4 = q1_buf[(idx + 7 - 4) % 7];
         let q1_6 = q1_buf[(idx + 7 - 6) % 7];
-        let jQ = hilbert(q1_0, q1_2, q1_4, q1_6) * mesa_period_mult;
+        let j_q = hilbert(q1_0, q1_2, q1_4, q1_6) * mesa_period_mult;
 
-        let i2 = i1_val - jQ;
-        let q2 = q1_val + jI;
+        let i2 = i1_val - j_q;
+        let q2 = q1_val + j_i;
 
         let i2_sm = 0.2 * i2 + 0.8 * prev_i2_sm;
         let q2_sm = 0.2 * q2 + 0.8 * prev_q2_sm;
@@ -209,31 +210,6 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
         mama_values,
         fama_values,
     })
-}
-
-#[inline(always)]
-fn flip_sign_nonnan(x: f64, val: f64) -> f64 {
-    if x.is_sign_negative() {
-        -val
-    } else {
-        val
-    }
-}
-
-#[inline(always)]
-pub fn atan_raw64(x: f64) -> f64 {
-    const N2: f64 = 0.273;
-    (FRAC_PI_4 + N2 - N2 * x.abs()) * x
-}
-
-#[inline(always)]
-pub fn atan64(x: f64) -> f64 {
-    if x.abs() > 1.0 {
-        debug_assert!(!x.is_nan());
-        flip_sign_nonnan(x, FRAC_PI_2) - atan_raw64(1.0 / x)
-    } else {
-        atan_raw64(x)
-    }
 }
 
 #[cfg(test)]

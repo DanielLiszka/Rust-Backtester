@@ -45,15 +45,8 @@ pub fn calculate_highpass(input: &HighPassInput) -> Result<HighPassOutput, Box<d
     let period = input.get_period();
 
     let len = data.len();
-    if len == 0 {
+    if len <= 2 {
         return Err("No data available for highpass calculation.".into());
-    }
-
-    if len < 2 {
-        // If we have less than 2 data points, just return the available data
-        return Ok(HighPassOutput {
-            values: data.to_vec(),
-        });
     }
 
     // Compute alpha
@@ -66,12 +59,10 @@ pub fn calculate_highpass(input: &HighPassInput) -> Result<HighPassOutput, Box<d
     let one_minus_half_alpha = 1.0 - alpha / 2.0;
     let one_minus_alpha = 1.0 - alpha;
 
-    // Initialize newseries with exact length and set the first element
     let mut newseries = vec![0.0; len];
     newseries[0] = data[0];
 
     for i in 1..len {
-        // newseries[i] = (1 - alpha/2)*data[i] - (1 - alpha/2)*data[i-1] + (1 - alpha)*newseries[i-1]
         let val = one_minus_half_alpha * data[i] - one_minus_half_alpha * data[i - 1]
             + one_minus_alpha * newseries[i - 1];
         newseries[i] = val;
@@ -90,14 +81,11 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // We'll use close prices as input data
         let data = &candles.close;
 
         let input = HighPassInput::with_default_params(data);
         let result = calculate_highpass(&input).expect("Failed to calculate highpass");
 
-        // Provided test values for the last 5:
-        // -265.1027020005024, -330.0916060058495, -422.7478979710918, -261.87532144673423, -698.9026088956363
         let expected_last_five = [
             -265.1027020005024,
             -330.0916060058495,
@@ -120,7 +108,6 @@ mod tests {
             );
         }
 
-        // Check that values are finite
         for val in &result.values {
             assert!(val.is_finite(), "Highpass output should be finite");
         }

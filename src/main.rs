@@ -3,7 +3,7 @@
 #![allow(unused_imports)]
 
 mod indicators;
-
+mod utilities;
 use csv::ReaderBuilder;
 use serde::Deserialize;
 use std::error::Error;

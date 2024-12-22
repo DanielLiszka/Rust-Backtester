@@ -7,7 +7,6 @@ pub struct EmaParams {
 
 impl Default for EmaParams {
     fn default() -> Self {
-        // Common default EMA period is 9 or sometimes 14, but we'll choose 9 here.
         EmaParams { period: Some(9) }
     }
 }
@@ -78,7 +77,6 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        // Using specified parameters
         let params = EmaParams { period: Some(9) };
         let input = EmaInput::new(close_prices, params);
         let ema_result = calculate_ema(&input).expect("Failed to calculate EMA");
@@ -103,7 +101,6 @@ mod tests {
             );
         }
 
-        // Test with default parameters (no period specified)
         let default_input = EmaInput::with_default_params(close_prices);
         let default_ema_result =
             calculate_ema(&default_input).expect("Failed to calculate EMA with defaults");

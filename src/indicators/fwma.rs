@@ -45,7 +45,7 @@ pub fn calculate_fwma(input: &FwmaInput) -> Result<FwmaOutput, Box<dyn Error>> {
     let period = input.get_period();
     let mut values = vec![f64::NAN; len];
     if period > len {
-        return Ok(FwmaOutput { values });
+        return Err("Invalid period specified for FWMA calculation.".into());
     }
     let mut fib = Vec::with_capacity(period);
     {
