@@ -1,5 +1,6 @@
 use std::error::Error;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, FRAC_PI_2, FRAC_PI_4};
+
 
 #[derive(Debug, Clone)]
 pub struct MamaParams {
@@ -152,7 +153,7 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
         prev_im = im;
 
         let mut cur_mesa = if re != 0.0 && im != 0.0 {
-            2.0 * PI / (im / re).atan()
+            2.0 * PI / atan64(im / re)
         } else {
             0.0
         };
@@ -175,7 +176,7 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
 
         let mut cur_phase = 0.0;
         if i1_val != 0.0 {
-            cur_phase = (180.0 / PI) * (q1_val / i1_val).atan();
+            cur_phase = (180.0 / PI) * atan64(q1_val / i1_val)
         }
 
         let old_phase = prev_phase;
@@ -250,7 +251,7 @@ mod tests {
             let fama_diff = (got_fama - exp_fama).abs() / exp_fama * 100.0;
             println!("{}: got_mama={}, got_fama={}", i, got_mama, got_fama);
             assert!(
-                mama_diff < 0.1,
+                mama_diff < 0.01,
                 "MAMA mismatch at {}: expected {}, got {}, diff {}%",
                 i,
                 exp_mama,
@@ -258,7 +259,7 @@ mod tests {
                 mama_diff
             );
             assert!(
-                fama_diff < 0.1,
+                fama_diff < 0.01,
                 "FAMA mismatch at {}: expected {}, got {}, diff {}%",
                 i,
                 exp_fama,
@@ -266,5 +267,30 @@ mod tests {
                 fama_diff
             );
         }
+    }
+}
+
+#[inline(always)]
+fn flip_sign_nonnan(x: f64, val: f64) -> f64 {
+    if x.is_sign_negative() {
+        -val
+    } else {
+        val
+    }
+}
+
+#[inline(always)]
+pub fn atan_raw64(x: f64) -> f64 {
+    const N2: f64 = 0.273;
+    (FRAC_PI_4 + N2 - N2 * x.abs()) * x
+}
+
+#[inline(always)]
+pub fn atan64(x: f64) -> f64 {
+    if x.abs() > 1.0 {
+        debug_assert!(!x.is_nan());
+        flip_sign_nonnan(x, FRAC_PI_2) - atan_raw64(1.0 / x)
+    } else {
+        atan_raw64(x)
     }
 }
