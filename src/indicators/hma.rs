@@ -259,7 +259,7 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
         let data = candles.select_candle_field("close").expect("Failed");
-        let input = HmaInput::with_default_params(&data);
+        let input = HmaInput::with_default_params(data);
         let result = calculate_hma(&input).expect("Failed hma");
         let expected_last_five = [
             59334.13333336847,

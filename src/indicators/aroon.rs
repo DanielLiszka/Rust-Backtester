@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AroonParams {
@@ -8,9 +8,7 @@ pub struct AroonParams {
 
 impl Default for AroonParams {
     fn default() -> Self {
-        AroonParams {
-            length: Some(14),
-        }
+        AroonParams { length: Some(14) }
     }
 }
 
@@ -75,10 +73,8 @@ pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>
 
         // Inline loop for scanning the window
         // Minimal branching and no iterator overhead
-        
 
-
-        for j in (start+1)..=i {
+        for j in (start + 1)..=i {
             let h_val = high[j];
             if h_val > highest_val {
                 highest_val = h_val;
@@ -122,10 +118,13 @@ mod tests {
         // Given test values:
         // Aroon Up last 5: 21.43%,14.29%,7.14%,0.00%,0.00%
         // Aroon Down last 5: 71.43%,64.29%,57.14%,50.00%,42.86%
-        let expected_up_last_five = vec![21.43, 14.29, 7.14, 0.0, 0.0];
-        let expected_down_last_five = vec![71.43,64.29,57.14,50.0,42.86];
+        let expected_up_last_five = [21.43, 14.29, 7.14, 0.0, 0.0];
+        let expected_down_last_five = [71.43, 64.29, 57.14, 50.0, 42.86];
 
-        assert!(result.aroon_up.len() >= 5 && result.aroon_down.len() >= 5, "Not enough Aroon values");
+        assert!(
+            result.aroon_up.len() >= 5 && result.aroon_down.len() >= 5,
+            "Not enough Aroon values"
+        );
         let start_index = result.aroon_up.len().saturating_sub(5);
 
         let up_last_five = &result.aroon_up[start_index..];
@@ -155,12 +154,18 @@ mod tests {
         // Check values after length are finite if not NaN
         for val in result.aroon_up.iter().skip(length) {
             if !val.is_nan() {
-                assert!(val.is_finite(), "Aroon Up should be finite after enough data");
+                assert!(
+                    val.is_finite(),
+                    "Aroon Up should be finite after enough data"
+                );
             }
         }
         for val in result.aroon_down.iter().skip(length) {
             if !val.is_nan() {
-                assert!(val.is_finite(), "Aroon Down should be finite after enough data");
+                assert!(
+                    val.is_finite(),
+                    "Aroon Down should be finite after enough data"
+                );
             }
         }
     }

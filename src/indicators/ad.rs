@@ -1,16 +1,10 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AdParams {
     // Currently no parameters for AD, but we keep this struct
     // in case we add parameters in the future.
-}
-
-impl Default for AdParams {
-    fn default() -> Self {
-        AdParams {}
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -80,13 +74,7 @@ mod tests {
         let input = AdInput::with_default_params(&candles);
         let ad_result = calculate_ad(&input).expect("Failed to calculate AD");
 
-        let expected_last_five_ad = vec![
-            1645918.16,
-            1645876.11,
-            1645824.27,
-            1645828.87,
-            1645728.78,
-        ];
+        let expected_last_five_ad = [1645918.16, 1645876.11, 1645824.27, 1645828.87, 1645728.78];
 
         assert!(
             ad_result.values.len() >= 5,

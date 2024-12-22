@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AoParams {
@@ -35,15 +35,11 @@ impl<'a> AoInput<'a> {
     }
 
     fn get_short_period(&self) -> usize {
-        self.params
-            .short_period
-            .unwrap_or(5)
+        self.params.short_period.unwrap_or(5)
     }
 
     fn get_long_period(&self) -> usize {
-        self.params
-            .long_period
-            .unwrap_or(34)
+        self.params.long_period.unwrap_or(34)
     }
 }
 
@@ -117,9 +113,12 @@ mod tests {
         let input = AoInput::with_default_params(&candles);
         let result = calculate_ao(&input).expect("Failed to calculate AO");
 
-        let expected_last_five = vec![-1671.3, -1401.6706, -1262.3559, -1178.4941, -1157.4118];
+        let expected_last_five = [-1671.3, -1401.6706, -1262.3559, -1178.4941, -1157.4118];
 
-        assert!(result.values.len() >= 5, "Not enough AO values for the test");
+        assert!(
+            result.values.len() >= 5,
+            "Not enough AO values for the test"
+        );
 
         let start_index = result.values.len().saturating_sub(5);
         let result_last_five = &result.values[start_index..];

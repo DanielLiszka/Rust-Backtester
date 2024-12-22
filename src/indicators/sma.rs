@@ -30,7 +30,9 @@ impl<'a> SmaInput<'a> {
     }
 
     fn get_period(&self) -> usize {
-        self.params.period.unwrap_or_else(|| SmaParams::default().period.unwrap())
+        self.params
+            .period
+            .unwrap_or_else(|| SmaParams::default().period.unwrap())
     }
 }
 
@@ -77,10 +79,10 @@ mod tests {
             .expect("Failed to extract close prices");
 
         let params = SmaParams { period: Some(9) };
-        let input = SmaInput::new(&close_prices, params);
+        let input = SmaInput::new(close_prices, params);
         let sma_result = calculate_sma(&input).expect("Failed to calculate SMA");
 
-        let expected_last_five_sma = vec![59180.8, 59175.0, 59129.4, 59085.4, 59133.7];
+        let expected_last_five_sma = [59180.8, 59175.0, 59129.4, 59085.4, 59133.7];
 
         assert!(
             sma_result.values.len() >= 5,
@@ -101,8 +103,12 @@ mod tests {
             );
         }
 
-        let default_input = SmaInput::with_default_params(&close_prices);
-        let default_sma_result = calculate_sma(&default_input).expect("Failed to calculate SMA with defaults");
-        assert!(!default_sma_result.values.is_empty(), "Should produce some SMA values with default params");
+        let default_input = SmaInput::with_default_params(close_prices);
+        let default_sma_result =
+            calculate_sma(&default_input).expect("Failed to calculate SMA with defaults");
+        assert!(
+            !default_sma_result.values.is_empty(),
+            "Should produce some SMA values with default params"
+        );
     }
 }

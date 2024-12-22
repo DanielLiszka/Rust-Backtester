@@ -52,7 +52,7 @@ pub fn calculate_tema(input: &TemaInput) -> Result<TemaOutput, Box<dyn Error>> {
     if period > n {
         return Err("Not enough data points to calculate TEMA.".into());
     }
-    
+
     let lookback = (period - 1) * 3;
     if n == 0 || n <= lookback {
         return Ok(TemaOutput {
@@ -112,10 +112,10 @@ mod tests {
             .expect("Failed to extract close prices");
 
         let params = TemaParams { period: Some(9) };
-        let input = TemaInput::new(&close_prices, params);
+        let input = TemaInput::new(close_prices, params);
         let tema_result = calculate_tema(&input).expect("Failed to calculate TEMA");
 
-        let expected_last_five_tema = vec![
+        let expected_last_five_tema = [
             59281.895570662884,
             59257.25021607971,
             59172.23342859784,

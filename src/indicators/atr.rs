@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AtrParams {
@@ -8,9 +8,7 @@ pub struct AtrParams {
 
 impl Default for AtrParams {
     fn default() -> Self {
-        AtrParams {
-            length: Some(14),
-        }
+        AtrParams { length: Some(14) }
     }
 }
 
@@ -79,8 +77,8 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
     // Accumulate TR for [1..length-1]
     for i in 1..length.min(len) {
         let hl = high[i] - low[i];
-        let hc = (high[i] - close[i-1]).abs();
-        let lc = (low[i] - close[i-1]).abs();
+        let hc = (high[i] - close[i - 1]).abs();
+        let lc = (low[i] - close[i - 1]).abs();
         let tr = hl.max(hc).max(lc);
         sum_of_tr += tr;
     }
@@ -92,13 +90,13 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
 
     // Now at i=length-1, we have first RMA
     let mut rma = sum_of_tr / length as f64;
-    atr_values[length-1] = rma;
+    atr_values[length - 1] = rma;
 
     // Continue from i=length onwards
     for i in length..len {
         let hl = high[i] - low[i];
-        let hc = (high[i] - close[i-1]).abs();
-        let lc = (low[i] - close[i-1]).abs();
+        let hc = (high[i] - close[i - 1]).abs();
+        let lc = (low[i] - close[i - 1]).abs();
         let tr = hl.max(hc).max(lc);
 
         // RMA update
@@ -122,7 +120,7 @@ mod tests {
         let result = calculate_atr(&input).expect("Failed to calculate ATR");
 
         // Provided test values for last 5 ATR: 916.89, 874.33, 838.45, 801.92, 811.57
-        let expected_last_five = vec![916.89, 874.33, 838.45, 801.92, 811.57];
+        let expected_last_five = [916.89, 874.33, 838.45, 801.92, 811.57];
 
         assert!(result.values.len() >= 5, "Not enough ATR values");
         let start_index = result.values.len().saturating_sub(5);
@@ -141,7 +139,10 @@ mod tests {
         let length = input.get_length();
         for val in result.values.iter().skip(length - 1) {
             if !val.is_nan() {
-                assert!(val.is_finite(), "ATR output should be finite after RMA stabilizes");
+                assert!(
+                    val.is_finite(),
+                    "ATR output should be finite after RMA stabilizes"
+                );
             }
         }
     }

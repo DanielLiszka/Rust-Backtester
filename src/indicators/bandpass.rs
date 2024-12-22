@@ -88,8 +88,7 @@ pub fn calculate_bandpass(input: &BandPassInput) -> Result<BandPassOutput, Box<d
     let mut bp = hp.clone();
     if len > 2 {
         for i in 2..len {
-            bp[i] = 0.5 * (1.0 - alpha) * hp[i]
-                - (1.0 - alpha) * 0.5 * hp[i - 2]
+            bp[i] = 0.5 * (1.0 - alpha) * hp[i] - (1.0 - alpha) * 0.5 * hp[i - 2]
                 + beta * (1.0 + alpha) * bp[i - 1]
                 - alpha * bp[i - 2];
         }
@@ -134,9 +133,9 @@ pub fn calculate_bandpass(input: &BandPassInput) -> Result<BandPassOutput, Box<d
 
     let mut signal = vec![0.0; len];
     for i in 0..len {
-        if bp_normalized[i]<trigger[i] {
+        if bp_normalized[i] < trigger[i] {
             signal[i] = 1.0;
-        } else if bp_normalized[i]>trigger[i] {
+        } else if bp_normalized[i] > trigger[i] {
             signal[i] = -1.0;
         } else {
             signal[i] = 0.0;
@@ -172,7 +171,7 @@ mod tests {
         // signal: -1, 1, 1, 1, 1
         // trigger: -0.4746908356434579, -0.4353877348116954, -0.3727126131420441, -0.2746336628365846, -0.18240018384226137
 
-        let expected_bp_last_five = vec![
+        let expected_bp_last_five = [
             -236.23678021132827,
             -247.4846395608195,
             -242.3788746078502,
@@ -180,7 +179,7 @@ mod tests {
             -179.97293838509464,
         ];
 
-        let expected_bp_normalized_last_five = vec![
+        let expected_bp_normalized_last_five = [
             -0.4399672555578846,
             -0.4651011734720517,
             -0.4596426251402882,
@@ -188,9 +187,9 @@ mod tests {
             -0.3475245023284841,
         ];
 
-        let expected_signal_last_five = vec![-1.0, 1.0, 1.0, 1.0, 1.0];
+        let expected_signal_last_five = [-1.0, 1.0, 1.0, 1.0, 1.0];
 
-        let expected_trigger_last_five = vec![
+        let expected_trigger_last_five = [
             -0.4746908356434579,
             -0.4353877348116954,
             -0.3727126131420441,
@@ -199,7 +198,10 @@ mod tests {
         ];
 
         assert!(result.bp.len() >= 5, "Not enough bp values");
-        assert!(result.bp_normalized.len() >= 5, "Not enough bp_normalized values");
+        assert!(
+            result.bp_normalized.len() >= 5,
+            "Not enough bp_normalized values"
+        );
         assert!(result.signal.len() >= 5, "Not enough signal values");
         assert!(result.trigger.len() >= 5, "Not enough trigger values");
 

@@ -3,19 +3,15 @@ extern crate lazy_static;
 extern crate my_project;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use my_project::indicators::data_loader::{read_candles_from_csv, Candles};
+use my_project::indicators::data_loader::read_candles_from_csv;
 
 use my_project::indicators::{
     acosc::{calculate_acosc, AcoscInput},
     ad::{calculate_ad, AdInput},
+    adosc::{calculate_adosc, AdoscInput},
     adx::{calculate_adx, AdxInput},
     adxr::{calculate_adxr, AdxrInput},
     alligator::{calculate_alligator, AlligatorInput},
-    ema::{calculate_ema, EmaInput},
-    rsi::{calculate_rsi, RsiInput},
-    sma::{calculate_sma, SmaInput},
-    zlema::{calculate_zlema, ZlemaInput},
-    adosc::{calculate_adosc, AdoscInput},
     alma::{calculate_alma, AlmaInput},
     ao::{calculate_ao, AoInput},
     apo::{calculate_apo, ApoInput},
@@ -23,24 +19,29 @@ use my_project::indicators::{
     aroonosc::{calculate_aroon_osc, AroonOscInput},
     atr::{calculate_atr, AtrInput},
     avgprice::{calculate_avgprice, AvgPriceInput},
-    highpass::{calculate_highpass, HighPassInput},
     bandpass::{calculate_bandpass, BandPassInput},
-    wma::{calculate_wma, WmaInput},
     dema::{calculate_dema, DemaInput},
-    tema::{calculate_tema, TemaInput},
-    trima::{calculate_trima, TrimaInput},
+    ema::{calculate_ema, EmaInput},
+    fwma::{calculate_fwma, FwmaInput},
+    highpass::{calculate_highpass, HighPassInput},
+    hma::{calculate_hma, HmaInput},
     kama::{calculate_kama, KamaInput},
     mama::{calculate_mama, MamaInput},
+    rsi::{calculate_rsi, RsiInput},
+    sma::{calculate_sma, SmaInput},
     t3::{calculate_t3, T3Input},
-    fwma::{calculate_fwma, FwmaInput},
-    hma::{calculate_hma, HmaInput},
+    tema::{calculate_tema, TemaInput},
+    trima::{calculate_trima, TrimaInput},
+    wma::{calculate_wma, WmaInput},
+    zlema::{calculate_zlema, ZlemaInput},
 };
 use std::time::Duration;
 
 fn benchmark_indicators(c: &mut Criterion) {
     // Load candles once
-    let candles = read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
-        .expect("Failed to load candles");
+    let candles =
+        read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
+            .expect("Failed to load candles");
 
     // Pre-extract derived data if needed
     // But now we always construct Inputs directly from Candles or slices
@@ -57,67 +58,67 @@ fn benchmark_indicators(c: &mut Criterion) {
 
     // HMA
     group.bench_function(BenchmarkId::new("HMA", 0), |b| {
-        let input = HmaInput::with_default_params(&close_prices);
+        let input = HmaInput::with_default_params(close_prices);
         b.iter(|| calculate_hma(black_box(&input)).expect("Failed to calculate HMA"))
     });
 
     // FWMA
     group.bench_function(BenchmarkId::new("FWMA", 0), |b| {
-        let input = FwmaInput::with_default_params(&close_prices);
+        let input = FwmaInput::with_default_params(close_prices);
         b.iter(|| calculate_fwma(black_box(&input)).expect("Failed to calculate FWMA"))
     });
 
     // MAMA
     group.bench_function(BenchmarkId::new("MAMA", 0), |b| {
-        let input = MamaInput::with_default_params(&close_prices);
+        let input = MamaInput::with_default_params(close_prices);
         b.iter(|| calculate_mama(black_box(&input)).expect("Failed to calculate MAMA"))
     });
-    
+
     // T3
     group.bench_function(BenchmarkId::new("T3", 0), |b| {
-        let input = T3Input::with_default_params(&close_prices);
+        let input = T3Input::with_default_params(close_prices);
         b.iter(|| calculate_t3(black_box(&input)).expect("Failed to calculate T3"))
     });
 
     // KAMA
     group.bench_function(BenchmarkId::new("KAMA", 0), |b| {
-        let input = KamaInput::with_default_params(&close_prices);
+        let input = KamaInput::with_default_params(close_prices);
         b.iter(|| calculate_kama(black_box(&input)).expect("Failed to calculate KAMA"))
     });
 
     // TRIMA
     group.bench_function(BenchmarkId::new("TRIMA", 0), |b| {
-        let input = TrimaInput::with_default_params(&close_prices);
+        let input = TrimaInput::with_default_params(close_prices);
         b.iter(|| calculate_trima(black_box(&input)).expect("Failed to calculate TRIMA"))
     });
 
     // TEMA
     group.bench_function(BenchmarkId::new("TEMA", 0), |b| {
-        let input = TemaInput::with_default_params(&close_prices);
+        let input = TemaInput::with_default_params(close_prices);
         b.iter(|| calculate_tema(black_box(&input)).expect("Failed to calculate TEMA"))
     });
 
-    // DEMA 
+    // DEMA
     group.bench_function(BenchmarkId::new("DEMA", 0), |b| {
-        let input = DemaInput::with_default_params(&close_prices);
+        let input = DemaInput::with_default_params(close_prices);
         b.iter(|| calculate_dema(black_box(&input)).expect("Failed to calculate DEMA"))
     });
 
     // WMA
     group.bench_function(BenchmarkId::new("WMA", 0), |b| {
-        let input = WmaInput::with_default_params(&close_prices);
+        let input = WmaInput::with_default_params(close_prices);
         b.iter(|| calculate_wma(black_box(&input)).expect("Failed to calculate WMA"))
     });
 
     // BANDPASS
     group.bench_function(BenchmarkId::new("BANDPASS", 0), |b| {
-        let input = BandPassInput::with_default_params(&close_prices);
+        let input = BandPassInput::with_default_params(close_prices);
         b.iter(|| calculate_bandpass(black_box(&input)).expect("Failed to calculate BANDPASS"))
     });
 
     // HIGHPASS
     group.bench_function(BenchmarkId::new("HIGHPASS", 0), |b| {
-        let input = HighPassInput::with_default_params(&close_prices);
+        let input = HighPassInput::with_default_params(close_prices);
         b.iter(|| calculate_highpass(black_box(&input)).expect("Failed to calculate HIGHPASS"))
     });
 
@@ -127,7 +128,7 @@ fn benchmark_indicators(c: &mut Criterion) {
         b.iter(|| calculate_avgprice(&input).expect("Failed to calculate AVGPRICE"))
     });
 
-    // ATR  
+    // ATR
     group.bench_function(BenchmarkId::new("ATR", 0), |b| {
         let input = AtrInput::with_default_params(&candles);
         b.iter(|| calculate_atr(black_box(&input)).expect("Failed to calculate ATR"))
@@ -156,10 +157,10 @@ fn benchmark_indicators(c: &mut Criterion) {
         let input = AoInput::with_default_params(&candles);
         b.iter(|| calculate_ao(black_box(&input)).expect("Failed to calculate AO"))
     });
-    
+
     // ALMA
     group.bench_function(BenchmarkId::new("ALMA", 0), |b| {
-        let input = AlmaInput::with_default_params(&close_prices);
+        let input = AlmaInput::with_default_params(close_prices);
         b.iter(|| calculate_alma(black_box(&input)).expect("Failed to calculate ALMA"))
     });
 
@@ -169,10 +170,9 @@ fn benchmark_indicators(c: &mut Criterion) {
         b.iter(|| calculate_adosc(black_box(&input)).expect("Failed to calculate ADOSC"))
     });
 
-
     // ZLEMA
     group.bench_function(BenchmarkId::new("ZLEMA", 0), |b| {
-        let input = ZlemaInput::with_default_params(&close_prices);
+        let input = ZlemaInput::with_default_params(close_prices);
         b.iter(|| calculate_zlema(black_box(&input)).expect("Failed to calculate ZLEMA"))
     });
 
@@ -196,19 +196,19 @@ fn benchmark_indicators(c: &mut Criterion) {
 
     // SMA
     group.bench_function(BenchmarkId::new("SMA", 0), |b| {
-        let input = SmaInput::with_default_params(&close_prices);
+        let input = SmaInput::with_default_params(close_prices);
         b.iter(|| calculate_sma(black_box(&input)).expect("Failed to calculate SMA"))
     });
 
     // EMA
     group.bench_function(BenchmarkId::new("EMA", 0), |b| {
-        let input = EmaInput::with_default_params(&close_prices);
+        let input = EmaInput::with_default_params(close_prices);
         b.iter(|| calculate_ema(black_box(&input)).expect("Failed to calculate EMA"))
     });
 
     // RSI
     group.bench_function(BenchmarkId::new("RSI", 0), |b| {
-        let input = RsiInput::with_default_params(&close_prices);
+        let input = RsiInput::with_default_params(close_prices);
         b.iter(|| calculate_rsi(black_box(&input)).expect("Failed to calculate RSI"))
     });
 

@@ -8,9 +8,7 @@ pub struct TrimaParams {
 impl Default for TrimaParams {
     fn default() -> Self {
         // Default to a 14-period TRIMA if not specified
-        TrimaParams {
-            period: Some(14)
-        }
+        TrimaParams { period: Some(14) }
     }
 }
 
@@ -70,7 +68,11 @@ pub fn calculate_trima(input: &TrimaInput) -> Result<TrimaOutput, Box<dyn Error>
     };
     let inv_weights = 1.0 / sum_of_weights;
 
-    let lead_period = if period % 2 == 1 { period / 2 } else { (period / 2) - 1 };
+    let lead_period = if period % 2 == 1 {
+        period / 2
+    } else {
+        (period / 2) - 1
+    };
     let trail_period = lead_period + 1;
 
     let mut weight_sum = 0.0;
@@ -85,7 +87,7 @@ pub fn calculate_trima(input: &TrimaInput) -> Result<TrimaOutput, Box<dyn Error>
         if i + 1 > period - lead_period {
             lead_sum += val;
         }
-        if i + 1 <= trail_period {
+        if i < trail_period {
             trail_sum += val;
         }
 
@@ -97,7 +99,7 @@ pub fn calculate_trima(input: &TrimaInput) -> Result<TrimaOutput, Box<dyn Error>
         }
     }
 
-    let mut lsi  = (period - 1) as isize - lead_period as isize + 1;
+    let mut lsi = (period - 1) as isize - lead_period as isize + 1;
     let mut tsi1 = (period - 1) as isize - period as isize + 1 + trail_period as isize;
     let mut tsi2 = (period - 1) as isize - period as isize + 1;
 
@@ -125,7 +127,6 @@ pub fn calculate_trima(input: &TrimaInput) -> Result<TrimaOutput, Box<dyn Error>
     Ok(TrimaOutput { values: out })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,11 +141,11 @@ mod tests {
             .expect("Failed to extract close prices");
 
         let params = TrimaParams { period: Some(30) };
-        let input = TrimaInput::new(&close_prices, params);
+        let input = TrimaInput::new(close_prices, params);
         let trima_result = calculate_trima(&input).expect("Failed to calculate TRIMA");
 
         // Corrected test values
-        let expected_last_five_trima = vec![
+        let expected_last_five_trima = [
             59957.916666666664,
             59846.770833333336,
             59750.620833333334,
@@ -171,9 +172,9 @@ mod tests {
         }
 
         // Test default params (14)
-        let default_input = TrimaInput::with_default_params(&close_prices);
-        let default_trima_result = calculate_trima(&default_input)
-            .expect("Failed to calculate TRIMA with defaults");
+        let default_input = TrimaInput::with_default_params(close_prices);
+        let default_trima_result =
+            calculate_trima(&default_input).expect("Failed to calculate TRIMA with defaults");
         assert!(
             !default_trima_result.values.is_empty(),
             "Should produce some TRIMA values with default params"

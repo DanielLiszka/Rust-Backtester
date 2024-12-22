@@ -165,9 +165,7 @@ pub fn calculate_t3(input: &T3Input) -> Result<T3Output, Box<dyn Error>> {
         today += 1;
     }
 
-    Ok(T3Output {
-        values: out_values,
-    })
+    Ok(T3Output { values: out_values })
 }
 
 #[cfg(test)]
@@ -188,10 +186,10 @@ mod tests {
             volume_factor: Some(0.0),
         };
 
-        let input = T3Input::new(&close_prices, params);
+        let input = T3Input::new(close_prices, params);
         let t3_result = calculate_t3(&input).expect("Failed to calculate T3");
 
-        let expected_last_five_t3 = vec![
+        let expected_last_five_t3 = [
             59304.716332473254,
             59283.56868015526,
             59261.16173577631,
@@ -214,9 +212,9 @@ mod tests {
             );
         }
 
-        let default_input = T3Input::with_default_params(&close_prices);
-        let default_t3_result = calculate_t3(&default_input)
-            .expect("Failed to calculate T3 with defaults");
+        let default_input = T3Input::with_default_params(close_prices);
+        let default_t3_result =
+            calculate_t3(&default_input).expect("Failed to calculate T3 with defaults");
         assert!(!default_t3_result.values.is_empty());
     }
 }

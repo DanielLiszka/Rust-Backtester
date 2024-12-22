@@ -1,15 +1,9 @@
 use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AcoscParams {
     // Currently no parameters. Can be extended in the future if needed.
-}
-
-impl Default for AcoscParams {
-    fn default() -> Self {
-        AcoscParams {}
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -160,7 +154,7 @@ pub fn calculate_acosc(input: &AcoscInput) -> Result<AcoscOutput, Box<dyn Error>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_acosc_accuracy() {
@@ -171,8 +165,8 @@ mod tests {
         let input = AcoscInput::with_default_params(&candles);
         let acosc_result = calculate_acosc(&input).expect("Failed to calculate acosc");
 
-        let expected_last_five_acosc_osc = vec![273.30, 383.72, 357.7, 291.25, 176.84];
-        let expected_last_five_acosc_change = vec![49.6, 110.4, -26.0, -66.5, -114.4];
+        let expected_last_five_acosc_osc = [273.30, 383.72, 357.7, 291.25, 176.84];
+        let expected_last_five_acosc_change = [49.6, 110.4, -26.0, -66.5, -114.4];
 
         assert!(
             acosc_result.osc.len() >= 5,

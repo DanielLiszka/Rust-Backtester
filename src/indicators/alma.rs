@@ -1,5 +1,4 @@
 use std::error::Error;
-use crate::indicators::data_loader::Candles;
 
 #[derive(Debug, Clone)]
 pub struct AlmaParams {
@@ -113,7 +112,9 @@ pub fn calculate_alma(input: &AlmaInput) -> Result<AlmaOutput, Box<dyn Error>> {
         alma_values[i] = sum * inv_norm;
     }
 
-    Ok(AlmaOutput { values: alma_values })
+    Ok(AlmaOutput {
+        values: alma_values,
+    })
 }
 
 #[cfg(test)]
@@ -129,13 +130,16 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        let input = AlmaInput::with_default_params(&close_prices);
+        let input = AlmaInput::with_default_params(close_prices);
         let result = calculate_alma(&input).expect("Failed to calculate ALMA");
 
         // Given test values
-        let expected_last_five = vec![59286.7222, 59273.5343, 59204.3729, 59155.9338, 59026.9253];
+        let expected_last_five = [59286.7222, 59273.5343, 59204.3729, 59155.9338, 59026.9253];
 
-        assert!(result.values.len() >= 5, "Not enough ALMA values for the test");
+        assert!(
+            result.values.len() >= 5,
+            "Not enough ALMA values for the test"
+        );
 
         let start_index = result.values.len().saturating_sub(5);
         let result_last_five = &result.values[start_index..];

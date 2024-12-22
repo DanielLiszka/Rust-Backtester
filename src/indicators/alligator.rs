@@ -46,27 +46,39 @@ impl<'a> AlligatorInput<'a> {
     }
 
     fn get_jaw_period(&self) -> usize {
-        self.params.jaw_period.unwrap_or_else(|| AlligatorParams::default().jaw_period.unwrap())
+        self.params
+            .jaw_period
+            .unwrap_or_else(|| AlligatorParams::default().jaw_period.unwrap())
     }
 
     fn get_jaw_offset(&self) -> usize {
-        self.params.jaw_offset.unwrap_or_else(|| AlligatorParams::default().jaw_offset.unwrap())
+        self.params
+            .jaw_offset
+            .unwrap_or_else(|| AlligatorParams::default().jaw_offset.unwrap())
     }
 
     fn get_teeth_period(&self) -> usize {
-        self.params.teeth_period.unwrap_or_else(|| AlligatorParams::default().teeth_period.unwrap())
+        self.params
+            .teeth_period
+            .unwrap_or_else(|| AlligatorParams::default().teeth_period.unwrap())
     }
 
     fn get_teeth_offset(&self) -> usize {
-        self.params.teeth_offset.unwrap_or_else(|| AlligatorParams::default().teeth_offset.unwrap())
+        self.params
+            .teeth_offset
+            .unwrap_or_else(|| AlligatorParams::default().teeth_offset.unwrap())
     }
 
     fn get_lips_period(&self) -> usize {
-        self.params.lips_period.unwrap_or_else(|| AlligatorParams::default().lips_period.unwrap())
+        self.params
+            .lips_period
+            .unwrap_or_else(|| AlligatorParams::default().lips_period.unwrap())
     }
 
     fn get_lips_offset(&self) -> usize {
-        self.params.lips_offset.unwrap_or_else(|| AlligatorParams::default().lips_offset.unwrap())
+        self.params
+            .lips_offset
+            .unwrap_or_else(|| AlligatorParams::default().lips_offset.unwrap())
     }
 }
 
@@ -200,9 +212,9 @@ mod tests {
         let input = AlligatorInput::with_default_params(&hl2_prices);
         let result = calculate_alligator(&input).expect("Failed to calculate alligator");
 
-        let expected_last_five_jaw_result = vec![60742.4, 60632.6, 60555.1, 60442.7, 60308.7];
-        let expected_last_five_teeth_result = vec![59908.0, 59757.2, 59684.3, 59653.5, 59621.1];
-        let expected_last_five_lips_result = vec![59355.2, 59371.7, 59376.2, 59334.1, 59316.2];
+        let expected_last_five_jaw_result = [60742.4, 60632.6, 60555.1, 60442.7, 60308.7];
+        let expected_last_five_teeth_result = [59908.0, 59757.2, 59684.3, 59653.5, 59621.1];
+        let expected_last_five_lips_result = [59355.2, 59371.7, 59376.2, 59334.1, 59316.2];
 
         let start_index: usize = result.jaw.len() - 5;
         let result_last_five_jaws = &result.jaw[start_index..];
@@ -248,6 +260,7 @@ mod tests {
             ..AlligatorParams::default()
         };
         let custom_input = AlligatorInput::new(&hl2_prices, custom_params);
-        let _ = calculate_alligator(&custom_input).expect("Alligator calculation with custom params failed");
+        let _ = calculate_alligator(&custom_input)
+            .expect("Alligator calculation with custom params failed");
     }
 }

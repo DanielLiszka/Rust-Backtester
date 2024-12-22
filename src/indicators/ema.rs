@@ -68,7 +68,7 @@ pub fn calculate_ema(input: &EmaInput) -> Result<EmaOutput, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_ema_accuracy() {
@@ -80,12 +80,15 @@ mod tests {
 
         // Using specified parameters
         let params = EmaParams { period: Some(9) };
-        let input = EmaInput::new(&close_prices, params);
+        let input = EmaInput::new(close_prices, params);
         let ema_result = calculate_ema(&input).expect("Failed to calculate EMA");
 
-        let expected_last_five_ema = vec![59302.2, 59277.9, 59230.2, 59215.1, 59103.1];
+        let expected_last_five_ema = [59302.2, 59277.9, 59230.2, 59215.1, 59103.1];
 
-        assert!(ema_result.values.len() >= 5, "Not enough EMA values for the test");
+        assert!(
+            ema_result.values.len() >= 5,
+            "Not enough EMA values for the test"
+        );
 
         let start_index = ema_result.values.len().saturating_sub(5);
         let result_last_five_ema = &ema_result.values[start_index..];
@@ -101,8 +104,12 @@ mod tests {
         }
 
         // Test with default parameters (no period specified)
-        let default_input = EmaInput::with_default_params(&close_prices);
-        let default_ema_result = calculate_ema(&default_input).expect("Failed to calculate EMA with defaults");
-        assert!(!default_ema_result.values.is_empty(), "Should produce EMA values with default params");
+        let default_input = EmaInput::with_default_params(close_prices);
+        let default_ema_result =
+            calculate_ema(&default_input).expect("Failed to calculate EMA with defaults");
+        assert!(
+            !default_ema_result.values.is_empty(),
+            "Should produce EMA values with default params"
+        );
     }
 }

@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AdoscParams {
@@ -138,13 +138,15 @@ pub fn calculate_adosc(input: &AdoscInput) -> Result<AdoscOutput, Box<dyn Error>
         }
     }
 
-    Ok(AdoscOutput { values: adosc_values })
+    Ok(AdoscOutput {
+        values: adosc_values,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::data_loader::{read_candles_from_csv, Candles};
+    use crate::indicators::data_loader::read_candles_from_csv;
 
     #[test]
     fn test_adosc_accuracy() {
@@ -156,7 +158,7 @@ mod tests {
         let result = calculate_adosc(&input).expect("Failed to calculate ADOSC");
 
         // The expected last five ADOSC values provided by you:
-        let expected_last_five = vec![-166.2175, -148.9983, -144.9052, -128.5921, -142.0772];
+        let expected_last_five = [-166.2175, -148.9983, -144.9052, -128.5921, -142.0772];
 
         assert!(
             result.values.len() >= 5,

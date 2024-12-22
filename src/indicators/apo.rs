@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct ApoParams {
@@ -36,15 +36,11 @@ impl<'a> ApoInput<'a> {
     }
 
     fn get_short_period(&self) -> usize {
-        self.params
-            .short_period
-            .unwrap_or(10)
+        self.params.short_period.unwrap_or(10)
     }
 
     fn get_long_period(&self) -> usize {
-        self.params
-            .long_period
-            .unwrap_or(20)
+        self.params.long_period.unwrap_or(20)
     }
 }
 
@@ -111,9 +107,12 @@ mod tests {
         let input = ApoInput::with_default_params(&candles);
         let result = calculate_apo(&input).expect("Failed to calculate APO");
 
-        let expected_last_five = vec![-429.8, -401.6, -386.1, -357.9, -374.1];
+        let expected_last_five = [-429.8, -401.6, -386.1, -357.9, -374.1];
 
-        assert!(result.values.len() >= 5, "Not enough APO values for the test");
+        assert!(
+            result.values.len() >= 5,
+            "Not enough APO values for the test"
+        );
 
         let start_index = result.values.len().saturating_sub(5);
         let result_last_five = &result.values[start_index..];
@@ -130,7 +129,10 @@ mod tests {
 
         // Check that after the long period, values are finite
         for val in result.values.iter().skip(20 - 1) {
-            assert!(val.is_finite(), "APO output should be finite after EMAs are established");
+            assert!(
+                val.is_finite(),
+                "APO output should be finite after EMAs are established"
+            );
         }
     }
 }

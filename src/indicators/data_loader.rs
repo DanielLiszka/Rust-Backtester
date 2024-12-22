@@ -7,7 +7,6 @@ use std::error::Error;
 use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-
 static LOAD_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, Clone)]
@@ -62,7 +61,7 @@ impl Candles {
             _ => Err(format!("Invalid calculated field: {}", field).into()),
         }
     }
-    
+
     // Calculate HL2: (High + Low) / 2
     pub fn hl2(&self) -> Vec<f64> {
         self.high

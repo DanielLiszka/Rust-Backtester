@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AroonOscParams {
@@ -8,9 +8,7 @@ pub struct AroonOscParams {
 
 impl Default for AroonOscParams {
     fn default() -> Self {
-        AroonOscParams {
-            length: Some(14),
-        }
+        AroonOscParams { length: Some(14) }
     }
 }
 
@@ -68,7 +66,7 @@ pub fn calculate_aroon_osc(input: &AroonOscInput) -> Result<AroonOscOutput, Box<
         let mut highest_idx = start;
         let mut lowest_idx = start;
 
-        for j in (start+1)..=i {
+        for j in (start + 1)..=i {
             let h_val = high[j];
             if h_val > highest_val {
                 highest_val = h_val;
@@ -109,7 +107,7 @@ mod tests {
         let result = calculate_aroon_osc(&input).expect("Failed to calculate Aroon Osc");
 
         // Provided test values for the last 5: -50.00, -50.00, -50.00, -50.00, -42.8571
-        let expected_last_five = vec![-50.0, -50.0, -50.0, -50.0, -42.8571];
+        let expected_last_five = [-50.0, -50.0, -50.0, -50.0, -42.8571];
 
         assert!(result.values.len() >= 5, "Not enough Aroon Osc values");
         let start_index = result.values.len().saturating_sub(5);
@@ -129,7 +127,10 @@ mod tests {
         // After length bars, should be finite if not NaN
         for val in result.values.iter().skip(length) {
             if !val.is_nan() {
-                assert!(val.is_finite(), "Aroon Osc should be finite after enough data");
+                assert!(
+                    val.is_finite(),
+                    "Aroon Osc should be finite after enough data"
+                );
             }
         }
     }

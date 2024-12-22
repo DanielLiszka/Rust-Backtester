@@ -130,8 +130,16 @@ pub fn calculate_adx(input: &AdxInput) -> Result<AdxOutput, Box<dyn Error>> {
         let up_move = current_high - prev_high;
         let down_move = prev_low - current_low;
 
-        let plus_dm = if up_move > down_move && up_move > 0.0 { up_move } else { 0.0 };
-        let minus_dm = if down_move > up_move && down_move > 0.0 { down_move } else { 0.0 };
+        let plus_dm = if up_move > down_move && up_move > 0.0 {
+            up_move
+        } else {
+            0.0
+        };
+        let minus_dm = if down_move > up_move && down_move > 0.0 {
+            down_move
+        } else {
+            0.0
+        };
 
         // Smooth values
         atr = atr * one_minus_rp + tr;
@@ -182,9 +190,12 @@ mod tests {
         let input = AdxInput::new(&candles, params);
         let ad_result = calculate_adx(&input).expect("Failed to calculate adx");
 
-        let expected_last_five_adx = vec![36.14, 36.52, 37.01, 37.46, 38.47];
+        let expected_last_five_adx = [36.14, 36.52, 37.01, 37.46, 38.47];
 
-        assert!(ad_result.values.len() >= 5, "Not enough adx values for the test");
+        assert!(
+            ad_result.values.len() >= 5,
+            "Not enough adx values for the test"
+        );
 
         let start_index = ad_result.values.len() - 5;
         let result_last_five_ad = &ad_result.values[start_index..];
@@ -202,7 +213,11 @@ mod tests {
 
         // Test with default parameters
         let default_input = AdxInput::with_default_params(&candles);
-        let default_adx_result = calculate_adx(&default_input).expect("Failed to calculate ADX with defaults");
-        assert!(!default_adx_result.values.is_empty(), "Should produce ADX values with default params");
+        let default_adx_result =
+            calculate_adx(&default_input).expect("Failed to calculate ADX with defaults");
+        assert!(
+            !default_adx_result.values.is_empty(),
+            "Should produce ADX values with default params"
+        );
     }
 }

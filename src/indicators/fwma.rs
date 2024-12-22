@@ -7,9 +7,7 @@ pub struct FwmaParams {
 
 impl Default for FwmaParams {
     fn default() -> Self {
-        FwmaParams {
-            period: Some(5),
-        }
+        FwmaParams { period: Some(5) }
     }
 }
 
@@ -55,7 +53,7 @@ pub fn calculate_fwma(input: &FwmaInput) -> Result<FwmaOutput, Box<dyn Error>> {
         let mut b = 1;
         fib.push(a as f64);
         for _ in 1..period {
-            let c = a+b;
+            let c = a + b;
             a = b;
             b = c;
             fib.push(a as f64);
@@ -70,9 +68,9 @@ pub fn calculate_fwma(input: &FwmaInput) -> Result<FwmaOutput, Box<dyn Error>> {
         let start = i + 1 - period;
         let mut sum = 0.0;
         let fib_slice = &fib[..];
-        let data_slice = &data[start..start+period];
+        let data_slice = &data[start..start + period];
         for j in 0..period {
-            sum += data_slice[j]*fib_slice[j];
+            sum += data_slice[j] * fib_slice[j];
         }
         values[i] = sum;
     }
@@ -88,22 +86,30 @@ mod tests {
     fn test_fwma_accuracy() {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
-        let data = candles.select_candle_field("close").expect("Failed to get close");
-        let input = FwmaInput::with_default_params(&data);
+        let data = candles
+            .select_candle_field("close")
+            .expect("Failed to get close");
+        let input = FwmaInput::with_default_params(data);
         let result = calculate_fwma(&input).expect("Failed to calculate FWMA");
-        let expected_last_five = vec![
+        let expected_last_five = [
             59273.583333333336,
             59252.5,
             59167.083333333336,
             59151.0,
             58940.333333333336,
         ];
-        assert!(result.values.len()>=5);
-        let start_index=result.values.len()-5;
-        let last_five=&result.values[start_index..];
-        for (i,&val) in last_five.iter().enumerate() {
-            let exp=expected_last_five[i];
-            assert!((val-exp).abs()<1e-8,"FWMA mismatch at {}: expected {}, got {}",i,exp,val);
+        assert!(result.values.len() >= 5);
+        let start_index = result.values.len() - 5;
+        let last_five = &result.values[start_index..];
+        for (i, &val) in last_five.iter().enumerate() {
+            let exp = expected_last_five[i];
+            assert!(
+                (val - exp).abs() < 1e-8,
+                "FWMA mismatch at {}: expected {}, got {}",
+                i,
+                exp,
+                val
+            );
         }
     }
 }

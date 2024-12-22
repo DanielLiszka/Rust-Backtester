@@ -8,9 +8,7 @@ pub struct HighPassParams {
 
 impl Default for HighPassParams {
     fn default() -> Self {
-        HighPassParams {
-            period: Some(48),
-        }
+        HighPassParams { period: Some(48) }
     }
 }
 
@@ -74,8 +72,7 @@ pub fn calculate_highpass(input: &HighPassInput) -> Result<HighPassOutput, Box<d
 
     for i in 1..len {
         // newseries[i] = (1 - alpha/2)*data[i] - (1 - alpha/2)*data[i-1] + (1 - alpha)*newseries[i-1]
-        let val = one_minus_half_alpha * data[i]
-            - one_minus_half_alpha * data[i - 1]
+        let val = one_minus_half_alpha * data[i] - one_minus_half_alpha * data[i - 1]
             + one_minus_alpha * newseries[i - 1];
         newseries[i] = val;
     }
@@ -101,7 +98,7 @@ mod tests {
 
         // Provided test values for the last 5:
         // -265.1027020005024, -330.0916060058495, -422.7478979710918, -261.87532144673423, -698.9026088956363
-        let expected_last_five = vec![
+        let expected_last_five = [
             -265.1027020005024,
             -330.0916060058495,
             -422.7478979710918,

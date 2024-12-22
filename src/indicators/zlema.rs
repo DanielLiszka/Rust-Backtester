@@ -66,7 +66,9 @@ pub fn calculate_zlema(input: &ZlemaInput) -> Result<ZlemaOutput, Box<dyn std::e
         zlema_values.push(last_ema);
     }
 
-    Ok(ZlemaOutput { values: zlema_values })
+    Ok(ZlemaOutput {
+        values: zlema_values,
+    })
 }
 
 #[cfg(test)]
@@ -82,15 +84,18 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
         let params = ZlemaParams { period: Some(14) };
-        let input = ZlemaInput::new(&close_prices, params);
+        let input = ZlemaInput::new(close_prices, params);
 
         let result = calculate_zlema(&input).expect("Failed to calculate ZLEMA");
-        let expected_last_five = vec![59015.1, 59165.2, 59168.1, 59147.0, 58978.9];
+        let expected_last_five = [59015.1, 59165.2, 59168.1, 59147.0, 58978.9];
 
-        assert!(result.values.len() >= 5, "Not enough EMA values for the test");
+        assert!(
+            result.values.len() >= 5,
+            "Not enough EMA values for the test"
+        );
 
         let start_index = result.values.len().saturating_sub(5);
-        let result_last_five= &result.values[start_index..];
+        let result_last_five = &result.values[start_index..];
 
         for (i, &value) in result_last_five.iter().enumerate() {
             assert!(

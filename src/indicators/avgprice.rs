@@ -1,5 +1,5 @@
-use std::error::Error;
 use crate::indicators::data_loader::Candles;
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AvgPriceParams;
@@ -24,7 +24,7 @@ impl<'a> AvgPriceInput<'a> {
     pub fn with_default_params(candles: &'a Candles) -> Self {
         AvgPriceInput {
             candles,
-            params: AvgPriceParams::default(),
+            params: AvgPriceParams,
         }
     }
 }
@@ -82,7 +82,7 @@ mod tests {
         let input = AvgPriceInput::with_default_params(&candles);
         let result = calculate_avgprice(&input).expect("Failed to calculate avgprice");
 
-        let expected = vec![101.25, 102.25, 103.25, 104.25, 105.25];
+        let expected = [101.25, 102.25, 103.25, 104.25, 105.25];
 
         assert_eq!(result.values.len(), 5);
         for (i, &val) in result.values.iter().enumerate() {

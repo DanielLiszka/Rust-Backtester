@@ -1,6 +1,5 @@
 use std::error::Error;
-use std::f64::consts::{PI, FRAC_PI_2, FRAC_PI_4};
-
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
 #[derive(Debug, Clone)]
 pub struct MamaParams {
@@ -212,6 +211,30 @@ pub fn calculate_mama(input: &MamaInput) -> Result<MamaOutput, Box<dyn Error>> {
     })
 }
 
+#[inline(always)]
+fn flip_sign_nonnan(x: f64, val: f64) -> f64 {
+    if x.is_sign_negative() {
+        -val
+    } else {
+        val
+    }
+}
+
+#[inline(always)]
+pub fn atan_raw64(x: f64) -> f64 {
+    const N2: f64 = 0.273;
+    (FRAC_PI_4 + N2 - N2 * x.abs()) * x
+}
+
+#[inline(always)]
+pub fn atan64(x: f64) -> f64 {
+    if x.abs() > 1.0 {
+        debug_assert!(!x.is_nan());
+        flip_sign_nonnan(x, FRAC_PI_2) - atan_raw64(1.0 / x)
+    } else {
+        atan_raw64(x)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -226,8 +249,11 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        let params = MamaParams { fast_limit: 0.5, slow_limit: 0.05 };
-        let input = MamaInput::new(&close_prices, params);
+        let params = MamaParams {
+            fast_limit: 0.5,
+            slow_limit: 0.05,
+        };
+        let input = MamaInput::new(close_prices, params);
         let result = calculate_mama(&input).expect("Failed to calculate MAMA");
 
         let mama_vals = &result.mama_values;
@@ -235,7 +261,7 @@ mod tests {
         assert!(mama_vals.len() > 5 && fama_vals.len() > 5);
 
         let last_idx = mama_vals.len() - 5;
-        let expected = vec![
+        let expected = [
             (59272.6126101837, 59904.82955384927),
             (59268.03197967452, 59888.90961449489),
             (59153.51598983726, 59705.06120833049),
@@ -267,30 +293,5 @@ mod tests {
                 fama_diff
             );
         }
-    }
-}
-
-#[inline(always)]
-fn flip_sign_nonnan(x: f64, val: f64) -> f64 {
-    if x.is_sign_negative() {
-        -val
-    } else {
-        val
-    }
-}
-
-#[inline(always)]
-pub fn atan_raw64(x: f64) -> f64 {
-    const N2: f64 = 0.273;
-    (FRAC_PI_4 + N2 - N2 * x.abs()) * x
-}
-
-#[inline(always)]
-pub fn atan64(x: f64) -> f64 {
-    if x.abs() > 1.0 {
-        debug_assert!(!x.is_nan());
-        flip_sign_nonnan(x, FRAC_PI_2) - atan_raw64(1.0 / x)
-    } else {
-        atan_raw64(x)
     }
 }

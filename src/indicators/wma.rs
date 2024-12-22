@@ -7,9 +7,7 @@ pub struct WmaParams {
 
 impl Default for WmaParams {
     fn default() -> Self {
-        WmaParams {
-            period: Some(30),
-        }
+        WmaParams { period: Some(30) }
     }
 }
 
@@ -92,7 +90,7 @@ mod tests {
         let input = WmaInput::with_default_params(data);
         let result = calculate_wma(&input).expect("Failed to calculate WMA");
 
-        let expected_last_five = vec![
+        let expected_last_five = [
             59638.52903225806,
             59563.7376344086,
             59489.4064516129,

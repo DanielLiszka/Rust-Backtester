@@ -127,8 +127,16 @@ pub fn calculate_adxr(input: &AdxrInput) -> Result<AdxrOutput, Box<dyn Error>> {
         let up_move = current_high - high[i - 1];
         let down_move = low[i - 1] - current_low;
 
-        let plus_dm = if up_move > down_move && up_move > 0.0 { up_move } else { 0.0 };
-        let minus_dm = if down_move > up_move && down_move > 0.0 { down_move } else { 0.0 };
+        let plus_dm = if up_move > down_move && up_move > 0.0 {
+            up_move
+        } else {
+            0.0
+        };
+        let minus_dm = if down_move > up_move && down_move > 0.0 {
+            down_move
+        } else {
+            0.0
+        };
 
         atr = atr - (atr * rp) + tr;
         plus_dm_smooth = plus_dm_smooth - (plus_dm_smooth * rp) + plus_dm;
@@ -184,13 +192,13 @@ mod tests {
     fn test_adxr_accuracy() {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
-        
+
         // Using specified parameters
         let params = AdxrParams { period: Some(14) };
         let input = AdxrInput::new(&candles, params);
         let ad_result = calculate_adxr(&input).expect("Failed to calculate adxr");
 
-        let expected_last_five_ad = vec![37.10, 37.3, 37.0, 36.2, 36.3];
+        let expected_last_five_ad = [37.10, 37.3, 37.0, 36.2, 36.3];
 
         assert!(
             ad_result.values.len() >= 5,
@@ -213,7 +221,11 @@ mod tests {
 
         // Test with default parameters (no period specified)
         let default_input = AdxrInput::with_default_params(&candles);
-        let default_adxr_result = calculate_adxr(&default_input).expect("Failed to calculate ADXR with defaults");
-        assert!(!default_adxr_result.values.is_empty(), "Should produce ADXR values with default params");
+        let default_adxr_result =
+            calculate_adxr(&default_input).expect("Failed to calculate ADXR with defaults");
+        assert!(
+            !default_adxr_result.values.is_empty(),
+            "Should produce ADXR values with default params"
+        );
     }
 }
