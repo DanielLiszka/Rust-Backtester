@@ -53,6 +53,7 @@ pub struct BandPassOutput {
     pub trigger: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_bandpass(input: &BandPassInput) -> Result<BandPassOutput, Box<dyn Error>> {
     let data = input.data;
     let period = input.get_period();
@@ -62,68 +63,76 @@ pub fn calculate_bandpass(input: &BandPassInput) -> Result<BandPassOutput, Box<d
     if len == 0 {
         return Err("No data available.".into());
     }
+    if period < 2 {
+        return Err("BandPass period must be >= 2".into());
+    }
 
-    // hp = high_pass_fast(source, 4 * period / bandwidth)
-    let hp_period_f = 4.0 * period as f64 / bandwidth;
+    // 1) Compute "hp_period" for the first highpass
+    let hp_period_f = 4.0 * (period as f64) / bandwidth;
     let hp_period = hp_period_f.round() as usize;
     if hp_period < 2 {
         return Err("hp_period is too small after rounding.".into());
     }
 
+    // 2) Calculate the first highpass array (hp)
     let mut hp_params = HighPassParams::default();
     hp_params.period = Some(hp_period);
-    let hp_input = HighPassInput {
-        data,
-        params: hp_params,
-    };
-    let hp_result = calculate_highpass(&hp_input)?;
-    let hp = hp_result.values;
 
-    // Compute beta, gamma, alpha as per Python code
+    let hp_input = HighPassInput { data, params: hp_params };
+    let hp_result = calculate_highpass(&hp_input)?;
+    let hp = hp_result.values; // same length as data
+
+    // 3) Precompute constants for bandpass
     let beta = (2.0 * PI / period as f64).cos();
     let gamma = (2.0 * PI * bandwidth / period as f64).cos();
     let alpha = 1.0 / gamma - ((1.0 / (gamma * gamma)) - 1.0).sqrt();
 
-    // bp = hp.clone()
-    let mut bp = hp.clone();
-    if len > 2 {
+    // 4) Build the bandpass array (bp) in-place
+    //    bp[i] = 0.5(1-alpha)*hp[i] - 0.5(1-alpha)*hp[i-2] + beta*(1+alpha)*bp[i-1] - alpha*bp[i-2]
+    //    for i>=2
+    let mut bp = hp.clone(); // start with a copy
+    if len >= 2 {
+        // We only start from i=2, because i=0..1 can't reference i-2
         for i in 2..len {
-            bp[i] = 0.5 * (1.0 - alpha) * hp[i] - (1.0 - alpha) * 0.5 * hp[i - 2]
+            bp[i] = 0.5 * (1.0 - alpha) * hp[i]
+                - 0.5 * (1.0 - alpha) * hp[i - 2]
                 + beta * (1.0 + alpha) * bp[i - 1]
                 - alpha * bp[i - 2];
         }
     }
 
-    // fast attack-slow decay AGC
+    // 5) Combine the "peak tracking" and "bp_normalized" steps into ONE pass.
+    //    k = 0.991
+    //    Let peak_prev = 0.  Then for each i:
+    //       peak_cur = peak_prev * k
+    //       if |bp[i]| > peak_cur => peak_cur = |bp[i]|
+    //       bp_normalized[i] = bp[i] / peak_cur (or 0.0 if peak_cur==0)
+    //       peak_prev = peak_cur
     let k = 0.991;
-    let mut peak = bp.clone();
-    for i in 0..len {
-        if i > 0 {
-            peak[i] = peak[i - 1] * k;
-        }
-        let abs_bp = bp[i].abs();
-        if abs_bp > peak[i] {
-            peak[i] = abs_bp;
-        }
-    }
-
+    let mut peak_prev = 0.0;
     let mut bp_normalized = vec![0.0; len];
     for i in 0..len {
-        if peak[i] != 0.0 {
-            bp_normalized[i] = bp[i] / peak[i];
+        peak_prev *= k;
+        let abs_bp = bp[i].abs();
+        if abs_bp > peak_prev {
+            peak_prev = abs_bp;
+        }
+        if peak_prev != 0.0 {
+            bp_normalized[i] = bp[i] / peak_prev;
         } else {
             bp_normalized[i] = 0.0;
         }
     }
 
+    // 6) Compute "trigger" array via second highpass on bp_normalized
     let trigger_period_f = (period as f64 / bandwidth) / 1.5;
     let trigger_period = trigger_period_f.round() as usize;
     if trigger_period < 2 {
         return Err("trigger_period is too small after rounding.".into());
     }
-
     let mut trigger_params = HighPassParams::default();
     trigger_params.period = Some(trigger_period);
+
     let trigger_input = HighPassInput {
         data: &bp_normalized,
         params: trigger_params,
@@ -131,17 +140,25 @@ pub fn calculate_bandpass(input: &BandPassInput) -> Result<BandPassOutput, Box<d
     let trigger_result = calculate_highpass(&trigger_input)?;
     let trigger = trigger_result.values;
 
+    // 7) Compute the signal array in a single pass
+    //    signal[i] = 1.0 if bp_normalized[i] < trigger[i]
+    //                 -1.0 if bp_normalized[i] > trigger[i]
+    //                  0.0 otherwise
     let mut signal = vec![0.0; len];
     for i in 0..len {
-        if bp_normalized[i] < trigger[i] {
+        let bn = bp_normalized[i];
+        let tr = trigger[i];
+        // We can do a single if-else chain:
+        if bn < tr {
             signal[i] = 1.0;
-        } else if bp_normalized[i] > trigger[i] {
+        } else if bn > tr {
             signal[i] = -1.0;
         } else {
             signal[i] = 0.0;
         }
     }
 
+    // Done
     Ok(BandPassOutput {
         bp,
         bp_normalized,

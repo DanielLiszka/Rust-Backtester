@@ -31,6 +31,7 @@ pub struct AcoscOutput {
     pub change: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_acosc(input: &AcoscInput) -> Result<AcoscOutput, Box<dyn Error>> {
     let candles = input.candles;
 

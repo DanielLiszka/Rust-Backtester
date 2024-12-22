@@ -52,6 +52,7 @@ pub struct AdoscOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_adosc(input: &AdoscInput) -> Result<AdoscOutput, Box<dyn Error>> {
     let candles = input.candles;
     let short = input.get_short_period();

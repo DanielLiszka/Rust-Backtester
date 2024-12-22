@@ -41,6 +41,7 @@ pub struct EmaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_ema(input: &EmaInput) -> Result<EmaOutput, Box<dyn Error>> {
     let data = input.data;
     let period = input.get_period();

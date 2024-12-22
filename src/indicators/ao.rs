@@ -48,6 +48,7 @@ pub struct AoOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_ao(input: &AoInput) -> Result<AoOutput, Box<dyn Error>> {
     let candles = input.candles;
     let short = input.get_short_period();

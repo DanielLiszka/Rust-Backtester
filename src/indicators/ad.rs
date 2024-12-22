@@ -31,6 +31,7 @@ pub struct AdOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_ad(input: &AdInput) -> Result<AdOutput, Box<dyn Error>> {
     let candles = input.candles;
     let high: &[f64] = candles.select_candle_field("high")?;

@@ -40,6 +40,7 @@ pub struct HighPassOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_highpass(input: &HighPassInput) -> Result<HighPassOutput, Box<dyn Error>> {
     let data = input.data;
     let period = input.get_period();

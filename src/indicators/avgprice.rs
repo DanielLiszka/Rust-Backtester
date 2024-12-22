@@ -34,6 +34,7 @@ pub struct AvgPriceOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_avgprice(input: &AvgPriceInput) -> Result<AvgPriceOutput, Box<dyn Error>> {
     let candles = input.candles;
     let len = candles.close.len();
@@ -62,14 +63,6 @@ mod tests {
 
     #[test]
     fn test_avgprice_accuracy() {
-        // We'll create a mock Candles dataset for testing.
-        // Using the sample data from above:
-        // Candle 1: O=100,H=110,L=90,C=105 => 101.25
-        // Candle 2: O=101,H=111,L=91,C=106 => 102.25
-        // Candle 3: O=102,H=112,L=92,C=107 => 103.25
-        // Candle 4: O=103,H=113,L=93,C=108 => 104.25
-        // Candle 5: O=104,H=114,L=94,C=109 => 105.25
-
         let candles = Candles {
             timestamp: vec![1., 2., 3., 4., 5.],
             open: vec![100., 101., 102., 103., 104.],

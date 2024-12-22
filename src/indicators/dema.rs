@@ -39,6 +39,7 @@ pub struct DemaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_dema(input: &DemaInput) -> Result<DemaOutput, Box<dyn Error>> {
     let data = input.data;
     let size = data.len();
@@ -48,8 +49,7 @@ pub fn calculate_dema(input: &DemaInput) -> Result<DemaOutput, Box<dyn Error>> {
         return Err("Invalid DEMA period (must be >= 1).".into());
     }
     if size < (2 * (period - 1)) {
-        let mut values = vec![f64::NAN; size];
-        return Ok(DemaOutput { values });
+        return Err("Invalid data length for DEMA calculation.".into());
     }
 
     let alpha = 2.0 / (period as f64 + 1.0);

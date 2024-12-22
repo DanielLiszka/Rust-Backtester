@@ -60,6 +60,7 @@ pub struct AlmaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_alma(input: &AlmaInput) -> Result<AlmaOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();

@@ -89,6 +89,7 @@ pub struct AlligatorOutput {
     pub lips: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_alligator(input: &AlligatorInput) -> Result<AlligatorOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();

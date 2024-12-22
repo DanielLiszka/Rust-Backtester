@@ -39,6 +39,7 @@ pub struct KamaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_kama(input: &KamaInput) -> Result<KamaOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();

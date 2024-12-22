@@ -39,6 +39,7 @@ pub struct FwmaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_fwma(input: &FwmaInput) -> Result<FwmaOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();

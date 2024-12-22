@@ -39,6 +39,7 @@ pub struct HmaOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_hma(input: &HmaInput) -> Result<HmaOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();

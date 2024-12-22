@@ -49,6 +49,7 @@ pub struct ApoOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_apo(input: &ApoInput) -> Result<ApoOutput, Box<dyn Error>> {
     let candles = input.candles;
     let short = input.get_short_period();

@@ -41,6 +41,7 @@ pub struct AroonOutput {
     pub aroon_down: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>> {
     let candles = input.candles;
     let length = input.get_length();

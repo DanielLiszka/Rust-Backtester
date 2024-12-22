@@ -40,6 +40,7 @@ pub struct AroonOscOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_aroon_osc(input: &AroonOscInput) -> Result<AroonOscOutput, Box<dyn Error>> {
     let candles = input.candles;
     let length = input.get_length();

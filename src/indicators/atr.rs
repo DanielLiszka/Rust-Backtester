@@ -1,5 +1,5 @@
 use crate::indicators::data_loader::Candles;
-use std::error::Error;
+use std::{error::Error, f32::consts::E};
 
 #[derive(Debug, Clone)]
 pub struct AtrParams {
@@ -40,6 +40,7 @@ pub struct AtrOutput {
     pub values: Vec<f64>,
 }
 
+#[inline]
 pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
     let candles = input.candles;
     let length = input.get_length();
@@ -84,8 +85,7 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
     }
 
     if length > len {
-        // Not enough data to even produce first RMA
-        return Ok(AtrOutput { values: atr_values });
+        return Err("Not enough data points to calculate ATR.".into());
     }
 
     // Now at i=length-1, we have first RMA
@@ -99,7 +99,6 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
         let lc = (low[i] - close[i - 1]).abs();
         let tr = hl.max(hc).max(lc);
 
-        // RMA update
         rma = rma + alpha * (tr - rma);
         atr_values[i] = rma;
     }
@@ -119,7 +118,6 @@ mod tests {
         let input = AtrInput::with_default_params(&candles);
         let result = calculate_atr(&input).expect("Failed to calculate ATR");
 
-        // Provided test values for last 5 ATR: 916.89, 874.33, 838.45, 801.92, 811.57
         let expected_last_five = [916.89, 874.33, 838.45, 801.92, 811.57];
 
         assert!(result.values.len() >= 5, "Not enough ATR values");
