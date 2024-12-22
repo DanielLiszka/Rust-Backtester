@@ -1,4 +1,3 @@
-use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
 #[derive(Debug, Clone)]
@@ -9,7 +8,7 @@ pub struct AoParams {
 
 impl Default for AoParams {
     fn default() -> Self {
-        AoParams {
+        Self {
             short_period: Some(5),
             long_period: Some(34),
         }
@@ -18,26 +17,28 @@ impl Default for AoParams {
 
 #[derive(Debug, Clone)]
 pub struct AoInput<'a> {
-    pub candles: &'a Candles,
+    pub data: &'a [f64],    // HL2 array
     pub params: AoParams,
 }
 
 impl<'a> AoInput<'a> {
-    pub fn new(candles: &'a Candles, params: AoParams) -> Self {
-        AoInput { candles, params }
+    pub fn new(data: &'a [f64], params: AoParams) -> Self {
+        AoInput { data, params }
     }
 
-    pub fn with_default_params(candles: &'a Candles) -> Self {
+    pub fn with_default_params(data: &'a [f64]) -> Self {
         AoInput {
-            candles,
+            data,
             params: AoParams::default(),
         }
     }
 
+    #[inline]
     fn get_short_period(&self) -> usize {
         self.params.short_period.unwrap_or(5)
     }
 
+    #[inline]
     fn get_long_period(&self) -> usize {
         self.params.long_period.unwrap_or(34)
     }
@@ -48,54 +49,48 @@ pub struct AoOutput {
     pub values: Vec<f64>,
 }
 
-#[inline]
 pub fn calculate_ao(input: &AoInput) -> Result<AoOutput, Box<dyn Error>> {
-    let candles = input.candles;
+    let data = input.data;
     let short = input.get_short_period();
     let long = input.get_long_period();
 
     if short == 0 || long == 0 || short >= long {
-        return Err("Invalid periods specified for AO calculation.".into());
+        return Err("Invalid periods for AO: short=0 or long=0 or short>=long".into());
     }
 
-    let len = candles.close.len();
+    let len = data.len();
     if len == 0 {
-        return Err("No candles available.".into());
+        return Err("No HL2 data provided.".into());
     }
 
-    let high = candles.select_candle_field("high")?;
-    let low = candles.select_candle_field("low")?;
-
-    let mut hl2_values = Vec::with_capacity(len);
-    for i in 0..len {
-        hl2_values.push((high[i] + low[i]) * 0.5);
+    if long > len {
+        return Ok(AoOutput {
+            values: vec![f64::NAN; len],
+        });
     }
 
     let mut ao_values = vec![f64::NAN; len];
+
     let mut short_sum = 0.0;
     let mut long_sum = 0.0;
 
     for i in 0..len {
-        let val = hl2_values[i];
+        let val = data[i];
         short_sum += val;
         long_sum += val;
 
-        // If we've accumulated more than `short` candles in short_sum, remove the oldest one
         if i >= short {
-            short_sum -= hl2_values[i - short];
+            short_sum -= data[i - short];
         }
 
-        // Similarly for long_sum
         if i >= long {
-            long_sum -= hl2_values[i - long];
+            long_sum -= data[i - long];
         }
 
-        // We have a valid short SMA after i >= short-1
-        // We have a valid long SMA after i >= long-1
-        if i >= long - 1 {
-            let short_sma = short_sum / short as f64;
-            let long_sma = long_sum / long as f64;
-            ao_values[i] = short_sma - long_sma;
+        if i >= (long - 1) {
+            let short_sma = short_sum / (short as f64);
+            let long_sma  = long_sum  / (long as f64);
+            ao_values[i]  = short_sma - long_sma;
         }
     }
 
@@ -111,9 +106,16 @@ mod tests {
     fn test_ao_accuracy() {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
-        let input = AoInput::with_default_params(&candles);
-        let result = calculate_ao(&input).expect("Failed to calculate AO");
 
+        let hl2_values: Vec<f64> = candles
+            .high
+            .iter()
+            .zip(&candles.low)
+            .map(|(&h, &l)| 0.5 * (h + l))
+            .collect();
+
+        let input = AoInput::with_default_params(&hl2_values);
+        let result = calculate_ao(&input).expect("Failed to calculate AO");
         let expected_last_five = [-1671.3, -1401.6706, -1262.3559, -1178.4941, -1157.4118];
 
         assert!(
@@ -134,9 +136,8 @@ mod tests {
             );
         }
 
-        // Check that values are finite for valid indices
         for val in result.values.iter().skip(input.get_long_period() - 1) {
-            assert!(val.is_finite(), "AO output should be finite");
+            assert!(val.is_finite(), "AO output should be finite at valid indices");
         }
     }
 }

@@ -154,7 +154,7 @@ fn benchmark_indicators(c: &mut Criterion) {
 
     // AO
     group.bench_function(BenchmarkId::new("AO", 0), |b| {
-        let input = AoInput::with_default_params(&candles);
+        let input = AoInput::with_default_params(&hl2_prices);
         b.iter(|| calculate_ao(black_box(&input)).expect("Failed to calculate AO"))
     });
 

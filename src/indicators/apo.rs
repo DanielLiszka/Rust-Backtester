@@ -9,7 +9,6 @@ pub struct ApoParams {
 
 impl Default for ApoParams {
     fn default() -> Self {
-        // Default: short=10, long=20 (from the snippet)
         ApoParams {
             short_period: Some(10),
             long_period: Some(20),
@@ -69,19 +68,16 @@ pub fn calculate_apo(input: &ApoInput) -> Result<ApoOutput, Box<dyn Error>> {
     }
 
     let mut apo_values = Vec::with_capacity(len);
-    // Pre-fill with NaN initially (optional)
     apo_values.resize(len, f64::NAN);
 
     let alpha_short = 2.0 / (short as f64 + 1.0);
     let alpha_long = 2.0 / (long as f64 + 1.0);
 
-    // Initialize EMAs with the first close price
     let mut short_ema = close[0];
     let mut long_ema = close[0];
 
-    apo_values[0] = short_ema - long_ema; // At the first candle, both EMAs equal the price.
+    apo_values[0] = short_ema - long_ema;
 
-    // Compute EMAs and APO in one loop
     for i in 1..len {
         let price = close[i];
         short_ema = alpha_short * price + (1.0 - alpha_short) * short_ema;
@@ -104,7 +100,6 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // short=10, long=20 from snippet
         let input = ApoInput::with_default_params(&candles);
         let result = calculate_apo(&input).expect("Failed to calculate APO");
 
@@ -128,7 +123,6 @@ mod tests {
             );
         }
 
-        // Check that after the long period, values are finite
         for val in result.values.iter().skip(20 - 1) {
             assert!(
                 val.is_finite(),

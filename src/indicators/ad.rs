@@ -2,10 +2,7 @@ use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
 #[derive(Debug, Clone, Default)]
-pub struct AdParams {
-    // Currently no parameters for AD, but we keep this struct
-    // in case we add parameters in the future.
-}
+pub struct AdParams {}
 
 #[derive(Debug, Clone)]
 pub struct AdInput<'a> {
@@ -71,7 +68,6 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // Using default parameters
         let input = AdInput::with_default_params(&candles);
         let ad_result = calculate_ad(&input).expect("Failed to calculate AD");
 

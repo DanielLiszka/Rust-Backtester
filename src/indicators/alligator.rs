@@ -12,10 +12,6 @@ pub struct AlligatorParams {
 
 impl Default for AlligatorParams {
     fn default() -> Self {
-        // Default values from original code:
-        // JAW_PERIOD = 13, JAW_OFFSET = 8
-        // TEETH_PERIOD = 8, TEETH_OFFSET = 5
-        // LIPS_PERIOD = 5, LIPS_OFFSET = 3
         AlligatorParams {
             jaw_period: Some(13),
             jaw_offset: Some(8),
@@ -129,7 +125,6 @@ pub fn calculate_alligator(input: &AlligatorInput) -> Result<AlligatorOutput, Bo
     for i in 0..len {
         let data_point = data[i];
 
-        // JAW calculation
         if !jaw_ready {
             if i < jaw_period {
                 jaw_sum += data_point;
@@ -150,7 +145,6 @@ pub fn calculate_alligator(input: &AlligatorInput) -> Result<AlligatorOutput, Bo
             }
         }
 
-        // TEETH calculation
         if !teeth_ready {
             if i < teeth_period {
                 teeth_sum += data_point;
@@ -171,7 +165,6 @@ pub fn calculate_alligator(input: &AlligatorInput) -> Result<AlligatorOutput, Bo
             }
         }
 
-        // LIPS calculation
         if !lips_ready {
             if i < lips_period {
                 lips_sum += data_point;
@@ -209,7 +202,6 @@ mod tests {
             .get_calculated_field("hl2")
             .expect("Failed to extract hl2 prices");
 
-        // Use default parameters (original constants)
         let input = AlligatorInput::with_default_params(&hl2_prices);
         let result = calculate_alligator(&input).expect("Failed to calculate alligator");
 
@@ -255,9 +247,8 @@ mod tests {
             );
         }
 
-        // Example of customizing parameters if needed:
         let custom_params = AlligatorParams {
-            jaw_period: Some(14), // Just an example of a custom parameter
+            jaw_period: Some(14),
             ..AlligatorParams::default()
         };
         let custom_input = AlligatorInput::new(&hl2_prices, custom_params);

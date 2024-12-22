@@ -1,5 +1,5 @@
 use crate::indicators::data_loader::Candles;
-use std::{error::Error, f32::consts::E};
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct AtrParams {
@@ -46,7 +46,7 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
     let length = input.get_length();
 
     if length == 0 {
-        return Err("Invalid length specified for ATR calculation.".into());
+        return Err("Invalid length for ATR calculation.".into());
     }
 
     let high = candles.select_candle_field("high")?;
@@ -57,50 +57,37 @@ pub fn calculate_atr(input: &AtrInput) -> Result<AtrOutput, Box<dyn Error>> {
     if len == 0 {
         return Err("No candles available.".into());
     }
+    if length > len {
+        return Err("Not enough data to calculate ATR.".into());
+    }
 
     let mut atr_values = vec![f64::NAN; len];
 
-    // Compute TR and RMA in one pass
-    // RMA logic:
-    //   At i=length-1: RMA = avg of first length TR values
-    //   For i>=length: RMA = prev_RMA + alpha*(TR - prev_RMA)
-    // alpha = 1/length
     let alpha = 1.0 / length as f64;
 
-    let mut sum_of_tr = 0.0;
+    let mut sum_tr = 0.0;
+    let mut rma = f64::NAN;
 
-    // For i=0, TR = high[0]-low[0]
-    {
-        let tr = high[0] - low[0];
-        sum_of_tr += tr;
-    }
+    for i in 0..len {
+        let tr = if i == 0 {
+            high[0] - low[0]
+        } else {
+            let hl = high[i] - low[i];
+            let hc = (high[i] - close[i - 1]).abs();
+            let lc = (low[i] - close[i - 1]).abs();
+            hl.max(hc).max(lc)
+        };
 
-    // Accumulate TR for [1..length-1]
-    for i in 1..length.min(len) {
-        let hl = high[i] - low[i];
-        let hc = (high[i] - close[i - 1]).abs();
-        let lc = (low[i] - close[i - 1]).abs();
-        let tr = hl.max(hc).max(lc);
-        sum_of_tr += tr;
-    }
-
-    if length > len {
-        return Err("Not enough data points to calculate ATR.".into());
-    }
-
-    // Now at i=length-1, we have first RMA
-    let mut rma = sum_of_tr / length as f64;
-    atr_values[length - 1] = rma;
-
-    // Continue from i=length onwards
-    for i in length..len {
-        let hl = high[i] - low[i];
-        let hc = (high[i] - close[i - 1]).abs();
-        let lc = (low[i] - close[i - 1]).abs();
-        let tr = hl.max(hc).max(lc);
-
-        rma = rma + alpha * (tr - rma);
-        atr_values[i] = rma;
+        if i < length {
+            sum_tr += tr;
+            if i == length - 1 {
+                rma = sum_tr / length as f64;
+                atr_values[i] = rma;
+            }
+        } else {
+            rma += alpha * (tr - rma);
+            atr_values[i] = rma;
+        }
     }
 
     Ok(AtrOutput { values: atr_values })

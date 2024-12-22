@@ -2,9 +2,7 @@ use crate::indicators::data_loader::Candles;
 use std::error::Error;
 
 #[derive(Debug, Clone, Default)]
-pub struct AcoscParams {
-    // Currently no parameters. Can be extended in the future if needed.
-}
+pub struct AcoscParams {}
 
 #[derive(Debug, Clone)]
 pub struct AcoscInput<'a> {
@@ -162,7 +160,6 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // Use default parameters
         let input = AcoscInput::with_default_params(&candles);
         let acosc_result = calculate_acosc(&input).expect("Failed to calculate acosc");
 

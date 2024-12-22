@@ -8,7 +8,6 @@ pub struct AdxrParams {
 
 impl Default for AdxrParams {
     fn default() -> Self {
-        // Common default for ADXR period is often 14
         AdxrParams { period: Some(14) }
     }
 }
@@ -193,7 +192,6 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // Using specified parameters
         let params = AdxrParams { period: Some(14) };
         let input = AdxrInput::new(&candles, params);
         let ad_result = calculate_adxr(&input).expect("Failed to calculate adxr");
@@ -219,7 +217,6 @@ mod tests {
             );
         }
 
-        // Test with default parameters (no period specified)
         let default_input = AdxrInput::with_default_params(&candles);
         let default_adxr_result =
             calculate_adxr(&default_input).expect("Failed to calculate ADXR with defaults");

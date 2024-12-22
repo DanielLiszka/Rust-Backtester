@@ -65,15 +65,11 @@ pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>
     let inv_length = 1.0 / length as f64;
 
     for i in (window - 1)..len {
-        // Compute highest and lowest in [i-(length), i]
         let start = i + 1 - window;
         let mut highest_val = high[start];
         let mut lowest_val = low[start];
         let mut highest_idx = start;
         let mut lowest_idx = start;
-
-        // Inline loop for scanning the window
-        // Minimal branching and no iterator overhead
 
         for j in (start + 1)..=i {
             let h_val = high[j];
@@ -91,9 +87,6 @@ pub fn calculate_aroon(input: &AroonInput) -> Result<AroonOutput, Box<dyn Error>
         let offset_highest = i - highest_idx;
         let offset_lowest = i - lowest_idx;
 
-        // Aroon Up = ((length - offset_highest)/length)*100
-        // Aroon Down = ((length - offset_lowest)/length)*100
-        // Use inv_length to avoid division each time
         aroon_up[i] = (length as f64 - offset_highest as f64) * inv_length * 100.0;
         aroon_down[i] = (length as f64 - offset_lowest as f64) * inv_length * 100.0;
     }
@@ -116,9 +109,6 @@ mod tests {
         let input = AroonInput::with_default_params(&candles);
         let result = calculate_aroon(&input).expect("Failed to calculate Aroon");
 
-        // Given test values:
-        // Aroon Up last 5: 21.43%,14.29%,7.14%,0.00%,0.00%
-        // Aroon Down last 5: 71.43%,64.29%,57.14%,50.00%,42.86%
         let expected_up_last_five = [21.43, 14.29, 7.14, 0.0, 0.0];
         let expected_down_last_five = [71.43, 64.29, 57.14, 50.0, 42.86];
 
@@ -152,7 +142,6 @@ mod tests {
         }
 
         let length = input.get_length();
-        // Check values after length are finite if not NaN
         for val in result.aroon_up.iter().skip(length) {
             if !val.is_nan() {
                 assert!(

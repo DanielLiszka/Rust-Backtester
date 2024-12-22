@@ -86,7 +86,6 @@ pub fn calculate_adosc(input: &AdoscInput) -> Result<AdoscOutput, Box<dyn Error>
     let mut adosc_values = vec![0.0; len];
     let mut sum_ad = 0.0;
 
-    // Initialize with the first candle
     {
         let h = high[0];
         let l = low[0];
@@ -101,19 +100,14 @@ pub fn calculate_adosc(input: &AdoscInput) -> Result<AdoscOutput, Box<dyn Error>
         let mfv = mfm * v;
         sum_ad += mfv;
 
-        // Initial EMAs
         let short_ema = sum_ad;
         let long_ema = sum_ad;
         let adosc = short_ema - long_ema;
         adosc_values[0] = adosc;
 
-        // Move variables out of block scope
-        // We'll reuse sum_ad. We need to keep track of short_ema and long_ema across iterations.
-        // We'll store them mutably here.
         let mut short_ema = short_ema;
         let mut long_ema = long_ema;
 
-        // Now start main loop from i=1
         for i in 1..len {
             let h = high[i];
             let l = low[i];
@@ -129,9 +123,7 @@ pub fn calculate_adosc(input: &AdoscInput) -> Result<AdoscOutput, Box<dyn Error>
             let mfv = mfm * v;
             sum_ad += mfv;
 
-            // Update short EMA
             short_ema = alpha_short * sum_ad + (1.0 - alpha_short) * short_ema;
-            // Update long EMA
             long_ema = alpha_long * sum_ad + (1.0 - alpha_long) * long_ema;
 
             let adosc = short_ema - long_ema;
@@ -154,11 +146,9 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // Use default parameters (short=3, long=10) or specify if needed:
         let input = AdoscInput::with_default_params(&candles);
         let result = calculate_adosc(&input).expect("Failed to calculate ADOSC");
 
-        // The expected last five ADOSC values provided by you:
         let expected_last_five = [-166.2175, -148.9983, -144.9052, -128.5921, -142.0772];
 
         assert!(
@@ -179,7 +169,6 @@ mod tests {
             );
         }
 
-        // Check that all values are finite
         for val in result.values.iter() {
             assert!(val.is_finite(), "ADOSC output should be finite");
         }

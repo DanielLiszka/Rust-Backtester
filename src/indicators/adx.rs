@@ -8,7 +8,6 @@ pub struct AdxParams {
 
 impl Default for AdxParams {
     fn default() -> Self {
-        // Common default period for ADX is often 14
         AdxParams { period: Some(14) }
     }
 }
@@ -70,7 +69,6 @@ pub fn calculate_adx(input: &AdxInput) -> Result<AdxOutput, Box<dyn Error>> {
     let mut plus_dm_sum = 0.0;
     let mut minus_dm_sum = 0.0;
 
-    // Initial sums
     for i in 1..=period {
         let current_high = high[i];
         let current_low = low[i];
@@ -141,7 +139,6 @@ pub fn calculate_adx(input: &AdxInput) -> Result<AdxOutput, Box<dyn Error>> {
             0.0
         };
 
-        // Smooth values
         atr = atr * one_minus_rp + tr;
         plus_dm_smooth = plus_dm_smooth * one_minus_rp + plus_dm;
         minus_dm_smooth = minus_dm_smooth * one_minus_rp + minus_dm;
@@ -185,7 +182,6 @@ mod tests {
         let file_path = "src/data/2018-09-01-2024-Bitfinex_Spot-4h.csv";
         let candles = read_candles_from_csv(file_path).expect("Failed to load test candles");
 
-        // Use explicit parameters
         let params = AdxParams { period: Some(14) };
         let input = AdxInput::new(&candles, params);
         let ad_result = calculate_adx(&input).expect("Failed to calculate adx");
@@ -211,7 +207,6 @@ mod tests {
             );
         }
 
-        // Test with default parameters
         let default_input = AdxInput::with_default_params(&candles);
         let default_adx_result =
             calculate_adx(&default_input).expect("Failed to calculate ADX with defaults");

@@ -9,7 +9,6 @@ pub struct AlmaParams {
 
 impl Default for AlmaParams {
     fn default() -> Self {
-        // Default from the given example
         AlmaParams {
             windowsize: Some(9),
             offset: Some(0.85),
@@ -60,7 +59,6 @@ pub struct AlmaOutput {
     pub values: Vec<f64>,
 }
 
-#[inline]
 pub fn calculate_alma(input: &AlmaInput) -> Result<AlmaOutput, Box<dyn Error>> {
     let data = input.data;
     let len = data.len();
@@ -76,9 +74,9 @@ pub fn calculate_alma(input: &AlmaInput) -> Result<AlmaOutput, Box<dyn Error>> {
     let s = windowsize as f64 / sigma;
     let s_sq = s * s;
     let den = 2.0 * s_sq;
-
     let mut weights = Vec::with_capacity(windowsize);
     let mut norm = 0.0;
+
     for i in 0..windowsize {
         let dif = i as f64 - m;
         let num = dif * dif;
@@ -90,32 +88,16 @@ pub fn calculate_alma(input: &AlmaInput) -> Result<AlmaOutput, Box<dyn Error>> {
 
     let mut alma_values = vec![f64::NAN; len];
 
-    // Use indexing and precompute start index outside inner loop
-    // Unsafe block to remove bounds checks:
-    // Make sure data and weights indexing is safe!
-    let data_ptr = data.as_ptr();
-    let weights_ptr = weights.as_ptr();
-
     for i in (windowsize - 1)..len {
         let start = i + 1 - windowsize;
         let mut sum = 0.0;
-
-        // SAFETY: `start + w_i < start + windowsize <= i+1 <= len`, so indices are in range.
-        // `w_i < weights.len()` since w_i < windowsize.
-        unsafe {
-            for w_i in 0..windowsize {
-                let price = *data_ptr.add(start + w_i);
-                let w = *weights_ptr.add(w_i);
-                sum += price * w;
-            }
+        for (w_i, &w) in weights.iter().enumerate() {
+            sum += data[start + w_i] * w;
         }
-
         alma_values[i] = sum * inv_norm;
     }
 
-    Ok(AlmaOutput {
-        values: alma_values,
-    })
+    Ok(AlmaOutput { values: alma_values })
 }
 
 #[cfg(test)]
@@ -131,16 +113,12 @@ mod tests {
             .select_candle_field("close")
             .expect("Failed to extract close prices");
 
-        let input = AlmaInput::with_default_params(close_prices);
+        let input = AlmaInput::with_default_params(&close_prices);
         let result = calculate_alma(&input).expect("Failed to calculate ALMA");
 
-        // Given test values
-        let expected_last_five = [59286.7222, 59273.5343, 59204.3729, 59155.9338, 59026.9253];
+        let expected_last_five = vec![59286.7222, 59273.5343, 59204.3729, 59155.9338, 59026.9253];
 
-        assert!(
-            result.values.len() >= 5,
-            "Not enough ALMA values for the test"
-        );
+        assert!(result.values.len() >= 5, "Not enough ALMA values for the test");
 
         let start_index = result.values.len().saturating_sub(5);
         let result_last_five = &result.values[start_index..];
