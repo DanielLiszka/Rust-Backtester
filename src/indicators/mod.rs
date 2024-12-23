@@ -27,3 +27,6 @@ pub mod tema;
 pub mod trima;
 pub mod wma;
 pub mod zlema;
+pub mod linearreg;
+pub mod wilders;
+pub mod sinwma;

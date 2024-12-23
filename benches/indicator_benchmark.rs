@@ -26,25 +26,25 @@ use my_project::indicators::{
     highpass::{calculate_highpass, HighPassInput},
     hma::{calculate_hma, HmaInput},
     kama::{calculate_kama, KamaInput},
+    linearreg::{calculate_linreg, LinRegInput},
     mama::{calculate_mama, MamaInput},
     rsi::{calculate_rsi, RsiInput},
+    sinwma::{calculate_sinwma, SinWmaInput},
     sma::{calculate_sma, SmaInput},
     t3::{calculate_t3, T3Input},
     tema::{calculate_tema, TemaInput},
     trima::{calculate_trima, TrimaInput},
+    wilders::{calculate_wilders, WildersInput},
     wma::{calculate_wma, WmaInput},
     zlema::{calculate_zlema, ZlemaInput},
 };
 use std::time::Duration;
 
 fn benchmark_indicators(c: &mut Criterion) {
-    // Load candles once
     let candles =
         read_candles_from_csv("src/data/bitfinex btc-usd 100,000 candles ends 09-01-24.csv")
             .expect("Failed to load candles");
 
-    // Pre-extract derived data if needed
-    // But now we always construct Inputs directly from Candles or slices
     let close_prices = candles
         .select_candle_field("close")
         .expect("Failed to extract close prices");
@@ -55,6 +55,24 @@ fn benchmark_indicators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Indicator Benchmarks");
     group.measurement_time(Duration::new(8, 0));
     group.warm_up_time(Duration::new(4, 0));
+
+    // SinWMA
+    group.bench_function(BenchmarkId::new("SINWMA", 0), |b| {
+        let input = SinWmaInput::with_default_params(close_prices);
+        b.iter(|| calculate_sinwma(black_box(&input)).expect("Failed to calculate SINWMA"))
+    });
+
+    // Wilders
+    group.bench_function(BenchmarkId::new("WILDERS", 0), |b| {
+        let input = WildersInput::with_default_params(close_prices);
+        b.iter(|| calculate_wilders(black_box(&input)).expect("Failed to calculate WILDERS"))
+    });
+
+    // Linear Regression
+    group.bench_function(BenchmarkId::new("LINREG", 0), |b| {
+        let input = LinRegInput::with_default_params(close_prices);
+        b.iter(|| calculate_linreg(black_box(&input)).expect("Failed to calculate LINREG"))
+    });
 
     // HMA
     group.bench_function(BenchmarkId::new("HMA", 0), |b| {
